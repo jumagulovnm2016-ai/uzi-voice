@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Голосовой протокол УЗИ — прототип</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f5c6e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root{
+    --bg:#eef2f5;--panel:#ffffff;--panel2:#f6f9fb;--ink:#14232e;--mute:#62727f;--line:#d9e1e8;
+    --brand:#0f5c6e;--brand-ink:#ffffff;--acc:#0e7c86;--acc-soft:#e1f2f3;
+    --ok:#1a7f4b;--ok-soft:#e4f4ea;--bad:#c0392b;--bad-soft:#fbe9e7;--warn:#a86400;--warn-soft:#fff4dc;
+    --shadow:0 1px 2px rgba(16,40,56,.06),0 6px 20px rgba(16,40,56,.06);--paper:#ffffff;
+  }
+  :root[data-theme=dark]{
+    --bg:#0c1318;--panel:#131d24;--panel2:#18242d;--ink:#dfe8ee;--mute:#8a9ba8;--line:#263540;
+    --brand:#0b2a33;--brand-ink:#e6f3f5;--acc:#35b5c0;--acc-soft:#12333a;
+    --ok:#4cc38a;--ok-soft:#12301f;--bad:#ff7b6b;--bad-soft:#3a1a17;--warn:#f0b24a;--warn-soft:#3a2b10;
+    --shadow:0 1px 2px rgba(0,0,0,.4);--paper:#18242d;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:light} :root[data-theme=dark]{color-scheme:dark}
+  body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  select,input,textarea,button{font:inherit;color:inherit}
+  select,input[type=text],input[type=number],textarea{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--panel);transition:border-color .15s,box-shadow .15s}
+  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  button{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 13px;cursor:pointer;transition:border-color .15s,background .15s}
+  button:hover{border-color:var(--acc);background:var(--acc-soft)}
+  button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+  header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);padding:10px 20px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+  .brand svg{width:34px;height:34px;flex:none}
+  .brand b{display:block;font-size:17px;font-weight:650;letter-spacing:.1px;line-height:1.15}
+  .brand span{font-size:12px;opacity:.72}
+  header label{font-size:12px;opacity:.9;display:flex;flex-direction:column;gap:2px}
+  header label.chk{flex-direction:row;align-items:center;gap:6px;font-size:13px}
+  header select{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:var(--brand-ink);padding:5px 8px;font-size:14px}
+  header select option{color:#14232e;background:#fff}
+  header input[type=checkbox]{accent-color:#7fe0e8;width:16px;height:16px}
+  #install{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:var(--brand-ink)}
+  #theme{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:var(--brand-ink);padding:6px 10px;line-height:1}
+  #mic{background:#fff;color:var(--brand);border:none;font-weight:650;padding:11px 22px;border-radius:999px;min-width:200px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  :root[data-theme=dark] #mic{background:var(--acc);color:#062126}
+  #mic:hover{filter:brightness(1.05)}
+  #mic.on{background:var(--bad);color:#fff;animation:pulse 1.5s infinite}
+  :root[data-theme=dark] #mic.on{background:#d9483a;color:#fff}
+  #mic:disabled{background:#8fa1ad;color:#fff;cursor:not-allowed;box-shadow:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,72,58,.65)}70%{box-shadow:0 0 0 14px rgba(217,72,58,0)}100%{box-shadow:0 0 0 0 rgba(217,72,58,0)}}
+
+  main{max-width:1280px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1.35fr 1fr;gap:18px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .card h2{font-size:12px;margin:0 0 12px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .full{grid-column:1/-1}
+  .patient{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+  .patient label{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
+  .patient input{color:var(--ink);font-size:15px}
+
+  table{width:100%;border-collapse:collapse}
+  td,th{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle;text-align:left}
+  tbody tr:last-child td{border-bottom:none}
+  th{font-size:11px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding-top:0}
+  tr.org td{background:var(--panel2);font-weight:650;color:var(--acc);font-size:13px;border-bottom:none;border-radius:8px;padding:6px 10px}
+  tr.flash td{animation:flash 1.4s}
+  @keyframes flash{0%{background:var(--warn-soft)}100%{background:transparent}}
+  td:first-child{font-weight:500}
+  td.val input[type=text]{width:100%;max-width:230px;font-variant-numeric:tabular-nums;font-weight:600}
+  td.val select{max-width:230px;width:100%}
+  .norm{color:var(--mute);font-size:13px;white-space:nowrap}
+  .st{width:34px;text-align:center;font-size:0}
+  .st::before{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:12px;font-weight:800}
+  .st.ok::before{content:"✓";background:var(--ok-soft);color:var(--ok)}
+  .st.bad::before{content:"!";background:var(--bad-soft);color:var(--bad)}
+  .st.part::before{content:"…";background:var(--warn-soft);color:var(--warn)}
+  .st.miss::before{content:"";width:8px;height:8px;background:var(--line)}
+  .calc{background:var(--ok-soft);border:1px solid transparent;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px;font-variant-numeric:tabular-nums}
+  .calc b{font-size:15px}
+  .calc.bad{background:var(--bad-soft)}
+  .nod{display:flex;gap:8px;align-items:center;margin:3px 0;font-size:14px}
+  .nod button{padding:0 7px;font-size:12px;border-radius:6px;color:var(--mute)}
+
+  #sysmsg{background:var(--warn-soft);border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px;border-left:4px solid var(--warn)}
+  #sysmsg.good{background:var(--ok-soft);border-left-color:var(--ok)}
+  #sysmsg.bad{background:var(--bad-soft);border-left-color:var(--bad)}
+  #active{color:var(--warn);font-weight:600;font-size:14px}
+  #active:not(:empty){background:var(--warn-soft);border-radius:8px;padding:6px 10px;margin-bottom:6px}
+  #interim{min-height:26px;color:var(--mute);font-style:italic;margin:4px 0 8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #testText{flex:1;min-width:180px}
+  #log{list-style:none;margin:10px 0 0;padding:0;max-height:400px;overflow:auto;font-size:13.5px}
+  #log li{padding:7px 10px;border-left:3px solid var(--line);margin-bottom:6px;background:var(--panel2);border-radius:0 8px 8px 0}
+  #log li.ok{border-color:var(--ok)} #log li.err{border-color:var(--bad)} #log li.cmd{border-color:var(--acc)}
+  #log .heard{color:var(--mute);font-size:12.5px} #log .res{margin-top:2px}
+  #log:empty::after{content:"Здесь появится всё, что услышал микрофон, и куда это записано.";color:var(--mute);font-size:13px}
+
+  #proto{width:100%;min-height:320px;font:15px/1.65 Georgia,"Times New Roman",serif;white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:22px 26px;resize:vertical}
+  .note{font-size:12.5px;color:var(--mute)}
+  details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  details summary{cursor:pointer;font-weight:600;color:var(--acc);font-size:14px}
+  code{background:var(--acc-soft);padding:1px 6px;border-radius:5px;font-size:.93em}
+  kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:12px;background:var(--panel2)}
+
+  @media(max-width:900px){
+    main{grid-template-columns:1fr;padding:12px 12px 96px;gap:12px}
+    header{padding:10px 12px}
+    .brand span{display:none}
+    #mic{position:fixed;left:14px;right:14px;bottom:14px;z-index:9;padding:16px 22px;font-size:17px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+    .norm{white-space:normal;font-size:11.5px}
+    html,body{overflow-x:hidden}
+    header{position:static}
+    header label{flex:1 1 40%}
+    header select{width:100%}
+    .brand{width:100%}
+    .patient label{flex:1 1 100%}
+    .patient label input{flex:1;min-width:0}
+    td,th{padding:7px 3px}
+    td:first-child{font-size:14px}
+    td.val input[type=text],td.val select{max-width:none;min-width:0}
+    table{table-layout:fixed}
+    col.c1{width:34%} col.c2{width:40%} col.c3{width:18%} col.c4{width:8%}
+    .card{padding:14px 12px}
+    #proto{padding:14px}
+  }
+  @media print{
+    :root,:root[data-theme=dark]{--ink:#000;--paper:#fff;--line:#fff;--panel:#fff;--bg:#fff}
+    header,.noprint,#logCard,#fieldsCard{display:none!important}
+    main{display:block;padding:0}
+    .card{border:none;padding:0;box-shadow:none}
+    #proto{border:none;min-height:0;height:auto;padding:0;color:#000}
+  }
+</style>
+</head>
+<body>
+<header class="noprint">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="rgba(255,255,255,.14)"/><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 20v0M14 15v10M19 10v20M24 14v12M29 17v6"/></g></svg>
+    <div><b>Голосовой протокол УЗИ</b><span>прототип · диктовка размеров в шаблон</span></div>
+  </div>
+  <label>Шаблон
+    <select id="tpl">
+      <option value="thyroid">Щитовидная железа</option>
+      <option value="abd">Органы брюшной полости</option>
+    </select>
+  </label>
+  <label id="sexWrap">Пол
+    <select id="sex"><option value="f">Ж</option><option value="m">М</option></select>
+  </label>
+  <label class="chk"><input type="checkbox" id="readback" checked> Повтор голосом</label>
+  <button id="install" hidden title="Установить на главный экран">⬇ Установить</button>
+  <button id="theme" title="Светлая / тёмная тема" aria-label="Сменить тему">🌙</button>
+  <button id="mic">🎤 Начать диктовку</button>
+</header>
+
+<main>
+  <section class="card full noprint">
+    <div class="patient">
+      <label>Пациент <input type="text" id="pname" placeholder="ФИО (вводить вручную)"></label>
+      <label>Возраст <input type="number" id="page" min="0" max="120" style="width:80px"></label>
+      <span class="note">Дата: <span id="today"></span></span>
+      <span class="note">· <kbd>Пробел</kbd> — вкл/выкл микрофон (подходит ножная педаль, эмулирующая клавишу)</span>
+    </div>
+  </section>
+
+  <section class="card" id="fieldsCard">
+    <h2>Поля шаблона</h2>
+    <table>
+      <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
+      <thead><tr><th>Параметр</th><th>Значение</th><th>Ориентир</th><th></th></tr></thead>
+      <tbody id="fields"></tbody>
+    </table>
+    <div id="calc"></div>
+    <p class="note">Нормы — ориентировочные, для прототипа. Перед реальным использованием сверьте с вашими стандартами (массив <code>TEMPLATES</code> в коде).</p>
+  </section>
+
+  <section class="card noprint" id="logCard">
+    <h2>Распознавание</h2>
+    <div id="sysmsg">Распознавание речи в Chrome идёт через серверы Google. Для теста не диктуйте ФИО и данные пациента — только размеры.</div>
+    <div id="active"></div>
+    <div id="interim"></div>
+    <div class="row">
+      <input type="text" id="testText" placeholder="или введите фразу, как будто продиктовали…">
+      <button id="testBtn">Разобрать</button>
+    </div>
+    <div class="row" style="margin:8px 0">
+      <button id="undo">↶ Отменить последнее</button>
+      <button id="reset">Очистить шаблон</button>
+    </div>
+    <ul id="log"></ul>
+    <details>
+      <summary>Как диктовать (примеры)</summary>
+      <div id="help" class="note" style="margin-top:8px"></div>
+    </details>
+  </section>
+
+  <section class="card full">
+    <div class="row noprint" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Протокол</h2>
+      <div class="row">
+        <button id="copy">Копировать</button>
+        <button id="print">Печать</button>
+      </div>
+    </div>
+    <textarea id="proto" spellcheck="false"></textarea>
+    <p class="note noprint">Текст пересобирается при каждом изменении полей. Ручные правки здесь сотрутся при следующей диктовке — правьте в конце.</p>
+  </section>
+</main>
+
+<script>
+/* ===================== ЯДРО: числа и разбор фраз ===================== */
+const norm = s => String(s).toLowerCase().replace(/ё/g, 'е');
+const B = '(?<![а-яa-z0-9])';           // «граница слова» для кириллицы
+const fmt = v => (Math.round(v * 100) / 100).toLocaleString('ru-RU', {maximumFractionDigits: 2});
+
+const W = {};
+[['ноль',0],['нуль',0],['один',1],['одна',1],['одну',1],['одного',1],['два',2],['две',2],['двух',2],['три',3],['трех',3],
+ ['четыре',4],['четырех',4],['пять',5],['шесть',6],['семь',7],['восемь',8],['девять',9]].forEach(([w,v]) => W[w] = [v,1,false]);
+[['десять',10],['одиннадцать',11],['двенадцать',12],['тринадцать',13],['четырнадцать',14],['пятнадцать',15],
+ ['шестнадцать',16],['семнадцать',17],['восемнадцать',18],['девятнадцать',19]].forEach(([w,v]) => W[w] = [v,2,true]);
+[['двадцать',20],['тридцать',30],['сорок',40],['пятьдесят',50],['шестьдесят',60],['семьдесят',70],['восемьдесят',80],
+ ['девяносто',90]].forEach(([w,v]) => W[w] = [v,2,false]);
+[['сто',100],['двести',200],['триста',300],['четыреста',400],['пятьсот',500],['шестьсот',600],['семьсот',700],
+ ['восемьсот',800],['девятьсот',900]].forEach(([w,v]) => W[w] = [v,3,false]);
+const DEC = new Set(['запятая','запятой','точка','целых','целая','целой']);
+
+function fracOf(v) { const s = String(Math.trunc(v)); return v / Math.pow(10, s.length); }
+
+/** Извлекает числа из фразы: цифры и слова («сто сорок пять», «три запятая восемь», «ноль восемь»). Результат в мм. */
+function parseNumbers(seg) {
+  let t = norm(seg)
+    .replace(/(\d)\s*[xх×*]\s*(?=\d)/g, '$1 на ')
+    .replace(/(\d),(\d)/g, '$1.$2')
+    .replace(/(\d)([а-яa-z])/g, '$1 $2');
+  const cm = /(?<![а-я])(сантиметр\S*|см)(?![а-я])/.test(t);
+  const toks = t.split(/[^а-яa-z0-9.]+/).map(x => x.replace(/^\.+|\.+$/g, '')).filter(Boolean);
+  const out = [];
+  let cur = null, last = 9, dec = false, zero = false;
+  const emit = v => {
+    if (zero) { v = fracOf(v); zero = false; }
+    else if (dec && out.length) { v = out.pop() + fracOf(v); }
+    dec = false; out.push(v);
+  };
+  const flush = () => { if (cur !== null) emit(cur); cur = null; last = 9; };
+  for (const tok of toks) {
+    if (/^\d+(\.\d+)?$/.test(tok)) { flush(); emit(parseFloat(tok)); continue; }
+    if (W[tok]) {
+      const [v, slot, teen] = W[tok];
+      if (v === 0) { flush(); if (zero) out.push(0); zero = true; continue; }
+      if (slot >= last) flush();
+      cur = (cur || 0) + v; last = teen ? 1 : slot; continue;
+    }
+    if (DEC.has(tok)) { flush(); if (out.length || zero) dec = true; continue; }
+    if (tok === 'полтора' || tok === 'полторы') { flush(); emit(1.5); continue; }
+    if (/^(десят|сот)(ых|ая|ой)$/.test(tok)) { flush(); continue; }
+    flush(); if (zero) { out.push(0); zero = false; } dec = false;
+  }
+  flush(); if (zero) out.push(0);
+  return out.map(v => cm ? v * 10 : v).map(v => Math.round(v * 100) / 100);
+}
+
+/* ===================== ШАБЛОНЫ ===================== */
+const TEMPLATES = {
+  thyroid: {
+    title: 'УЛЬТРАЗВУКОВОЕ ИССЛЕДОВАНИЕ ЩИТОВИДНОЙ ЖЕЛЕЗЫ',
+    fields: [
+      {id:'r', org:'Щитовидная железа', label:'Правая доля', lobe:'правая доля', type:'dims', n:3, al:['прав\\S*\\s+дол\\S*'], hint:'3 размера, мм'},
+      {id:'l', org:'Щитовидная железа', label:'Левая доля', lobe:'левая доля', type:'dims', n:3, al:['лев\\S*\\s+дол\\S*'],  hint:'3 размера, мм'},
+      {id:'ist', org:'Щитовидная железа', label:'Перешеек', lobe:'перешеек', type:'dims', n:1, al:['переш\\S*'], norms:[{max:5}]},
+      {id:'cont', org:'Щитовидная железа', label:'Контуры', type:'enum', multi:true, al:['контур\\S*'],
+        opts:[['неровные','неровн|бугрист'],['нечёткие','нечетк|размыт'],['ровные, чёткие','ровн|четк']], normal:'ровные, чёткие'},
+      {id:'echo', org:'Щитовидная железа', label:'Эхогенность', type:'enum', al:['эхогенн\\S*'],
+        opts:[['повышена','повыш'],['снижена','сниж|пониж'],['средняя (не изменена)','средн|обычн|не измен|норм|сохран']], normal:'средняя (не изменена)'},
+      {id:'str', org:'Щитовидная железа', label:'Структура', type:'enum', al:['структур\\S*','эхоструктур\\S*'],
+        opts:[['неоднородная','неоднород'],['однородная','однород']], normal:'однородная'},
+      {id:'nod', org:'Щитовидная железа', label:'Узловые образования', type:'nodule',
+        al:['(?:узлов\\S*\\s+образовани\\S*|узел|узл\\S*|образовани\\S*)(?:\\s+(?:в\\s+)?(?:прав\\S*|лев\\S*)\\s+дол\\S*|\\s+(?:в\\s+)?переше\\S*)?']},
+      {id:'cdk', org:'Щитовидная железа', label:'Кровоток (ЦДК)', plabel:'кровоток при ЦДК', type:'enum', al:['кровоток\\S*','васкуляризаци\\S*'],
+        opts:[['не изменён','не измен|не усил|норм|обычн'],['усилен','усил|повыш|гиперваскул'],['снижен','сниж|обедн']], normal:'не изменён'},
+      {id:'ln', org:'Щитовидная железа', label:'Регионарные лимфоузлы', type:'enum', al:['(?:регионарн\\S*\\s+)?лимфоузл\\S*','(?:регионарн\\S*\\s+)?лимфатическ\\S*\\s+узл\\S*'],
+        opts:[['не изменены','не измен|не увелич|норм|без особенност'],['увеличены','увелич|измен']], normal:'не изменены'},
+      {id:'note', org:'', label:'Примечание', type:'note', al:['примечани\\S*','дополнительно']}
+    ],
+    help: [
+      '«правая доля» … пауза … «15 на 18» … «на 45» — можно по частям, поле ждёт числа',
+      '«правая доля длина 45 ширина 18» … «высота 15» — размеры по названиям',
+      '«контуры неровные нечёткие», «эхогенность изменена неоднородно» — свой текст тоже запишется',
+      '«кровоток усилен», «лимфоузлы не изменены»',
+      '«правая доля 15 на 18 на 45» — три размера доли',
+      '«левая доля 14 18 44 перешеек 4» — несколько полей в одной фразе',
+      '«правая доля полтора сантиметра на 1,8 на 4,5» — сантиметры переводятся в мм',
+      '«контуры ровные», «эхогенность снижена», «структура неоднородная»',
+      '«узел в правой доле 8 на 6 на 7 гипоэхогенный»',
+      '«узловые образования не выявлены»',
+      '«примечание …» — свободный текст',
+      '«отмена» — отменить последнее, «повтори», «стоп»'
+    ]
+  },
+  abd: {
+    title: 'УЛЬТРАЗВУКОВОЕ ИССЛЕДОВАНИЕ ОРГАНОВ БРЮШНОЙ ПОЛОСТИ',
+    fields: [
+      {id:'lr', org:'Печень', label:'Правая доля (КВР)', plabel:'правая доля (КВР)', type:'dims', n:1, al:['прав\\S*\\s+дол\\S*(?:\\s+печен\\S*)?','квр'], norms:[{max:150}]},
+      {id:'ll', org:'Печень', label:'Левая доля (толщина)', plabel:'левая доля (толщина)', type:'dims', n:1, al:['лев\\S*\\s+дол\\S*(?:\\s+печен\\S*)?'], norms:[{max:60}]},
+      {id:'lecho', org:'Печень', label:'Эхогенность печени', plabel:'эхогенность', type:'enum', al:['эхогенн\\S*(?:\\s+печен\\S*)?'],
+        opts:[['повышена','повыш'],['снижена','сниж|пониж'],['не изменена','средн|обычн|не измен|норм|сохран']], normal:'не изменена'},
+      {id:'pv', org:'Печень', label:'Воротная вена', type:'dims', n:1, al:['воротн\\S*(?:\\s+вен\\S*)?'], norms:[{max:13}]},
+      {id:'chd', org:'Печень', label:'Холедох', type:'dims', n:1, al:['холедох\\S*','общ\\S*\\s+желчн\\S*\\s+проток\\S*'], norms:[{max:6}]},
+      {id:'gb', org:'Желчный пузырь', label:'Размеры (Д × Ш)', plabel:'размеры', type:'dims', n:2, al:['желчн\\S*(?:\\s+пузыр\\S*)?'], norms:[{max:100},{max:35}]},
+      {id:'gbw', org:'Желчный пузырь', label:'Стенка', type:'dims', n:1, al:['стенк\\S*(?:\\s+желчн\\S*(?:\\s+пузыр\\S*)?)?'], norms:[{max:3}]},
+      {id:'gbc', org:'Желчный пузырь', label:'Конкременты', type:'enum', al:['конкремент\\S*','камн\\S*','камен\\S*'],
+        opts:[['не выявлены','нет|не выяв|не обнаруж|отсутств|не визуал'],['выявлены','есть|выяв|обнаруж|множеств|единичн|визуал']], normal:'не выявлены'},
+      {id:'ph', org:'Поджелудочная железа', label:'Головка', type:'dims', n:1, al:['головк\\S*(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:32}]},
+      {id:'pb', org:'Поджелудочная железа', label:'Тело', type:'dims', n:1, al:['тел[оау](?![а-я])(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:21}]},
+      {id:'pt', org:'Поджелудочная железа', label:'Хвост', type:'dims', n:1, al:['хвост\\S*(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:30}]},
+      {id:'pecho', org:'Поджелудочная железа', label:'Эхогенность', type:'enum', al:['эхогенн\\S*\\s+поджелуд\\S*(?:\\s+желез\\S*)?','эхогенн\\S*\\s+железы'],
+        opts:[['повышена','повыш'],['снижена','сниж|пониж'],['не изменена','средн|обычн|не измен|норм|сохран']], normal:'не изменена'},
+      {id:'sp', org:'Селезёнка', label:'Размеры (Д × Т)', plabel:'размеры', type:'dims', n:2, al:['селезенк\\S*'], norms:[{max:120},{max:50}]},
+      {id:'note', org:'', label:'Примечание', type:'note', al:['примечани\\S*','дополнительно']}
+    ],
+    help: [
+      '«правая доля 145 левая доля 55»',
+      '«воротная вена 11 холедох 4»',
+      '«желчный пузырь 70 на 25 стенка 2 конкрементов нет»',
+      '«головка 28 тело 15 хвост 25»',
+      '«эхогенность печени повышена», «эхогенность поджелудочной снижена»',
+      '«селезёнка 110 на 40»',
+      '«отмена», «повтори», «стоп»'
+    ]
+  }
+};
+
+function nodDescr(t) {
+  const d = [];
+  if (/гипоэхоген/.test(t)) d.push('гипоэхогенный');
+  else if (/гиперэхоген/.test(t)) d.push('гиперэхогенный');
+  else if (/изоэхоген/.test(t)) d.push('изоэхогенный');
+  else if (/анэхоген|кист/.test(t)) d.push('анэхогенный (кистозный)');
+  else if (/смешан/.test(t)) d.push('смешанной эхогенности');
+  if (/кальцинат|микрокальц/.test(t)) d.push('с кальцинатами');
+  if (/ободок|халo|хало/.test(t)) d.push('с ободком');
+  return d.join(', ');
+}
+
+const DIMKEY = {'длин':0,'ширин':1,'толщин':2,'высот':2,'переднезадн':2};
+const hasNull = v => v.some(x => x == null);
+const fmtD = v => v.map(x => x == null ? '?' : fmt(x)).join(' × ');
+const TERMS = [[/перинадулярн/g,'перинодулярн'],[/интранадулярн/g,'интранодулярн'],[/эхагенн/g,'эхогенн'],[/гипоэхогены(?![а-я])/g,'гипоэхогенный']];
+const fixTerms = t => TERMS.reduce((x, [a, b]) => x.replace(a, b), t);
+const NONE = /не\s*(выяв|обнаруж|визуал|определ)|(?<![а-я])нет(?![а-я])|отсутств/;
+
+/** Собирает размеры поля: по порядку или по словам «длина/ширина/толщина/высота»; дополняет ранее начатое значение. */
+function dimsFrom(f, seg, prev) {
+  let base = prev && (prev.length < f.n || hasNull(prev)) ? prev.slice() : [];
+  const kre = /(длин|ширин|толщин|высот|переднезадн)\S*/g;
+  if (f.n === 3 && kre.test(seg)) {
+    kre.lastIndex = 0; const ks = []; let m;
+    while ((m = kre.exec(seg))) ks.push({pos: DIMKEY[m[1]], s: m.index + m[0].length, at: m.index});
+    const val = [0, 1, 2].map(i => base[i] != null ? base[i] : null); let cnt = 0;
+    ks.forEach((k, i) => { const n = parseNumbers(seg.slice(k.s, i + 1 < ks.length ? ks[i + 1].at : seg.length)); if (n.length) { val[k.pos] = n[0]; cnt++; } });
+    return {value: val, cnt, extra: []};
+  }
+  const nums = parseNumbers(seg), extra = [];
+  if (nums.length >= f.n) base = [];
+  for (const x of nums) { const i = base.findIndex(v => v == null); if (i >= 0) base[i] = x; else if (base.length < f.n) base.push(x); else extra.push(x); }
+  return {value: base, cnt: nums.length, extra};
+}
+
+/** Разбирает фразу на операции над полями шаблона. ctx = {active, pendLoc, vals} — поле, ожидающее продолжения. */
+function parseUtterance(text, tplKey, ctx) {
+  ctx = ctx || {}; const vals = ctx.vals || {};
+  const tpl = TEMPLATES[tplKey];
+  const t = norm(text).replace(/[.,;:!?]+(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/конец примечани|примечани\S* (законч|конец)/.test(t)) return {ops: [], command: 'endnote', text: t, active: null, pendLoc: null};
+  const found = [];
+  for (const f of tpl.fields) for (const a of f.al) {
+    const re = new RegExp(B + '(?:' + a + ')', 'g'); let m;
+    while ((m = re.exec(t))) { found.push({s: m.index, e: m.index + m[0].length, f, txt: m[0]}); if (!m[0].length) re.lastIndex++; }
+  }
+  found.sort((a, b) => (b.e - b.s) - (a.e - a.s));
+  const acc = [];
+  for (const m of found) if (!acc.some(x => m.s < x.e && x.s < m.e)) acc.push(m);
+  acc.sort((a, b) => a.s - b.s);
+  // идёт примечание: поле посреди фразы («определяется перинодулярный кровоток») — это текст примечания, а не новое поле
+  const actF = ctx.active && tpl.fields.find(x => x.id === ctx.active);
+  if (actF && actF.type === 'note' && acc.length && acc[0].s > 0) acc.length = 0;
+  const ni = acc.findIndex(m => m.f.type === 'note'); if (ni >= 0) acc.length = ni + 1;   // примечание забирает всё до конца фразы
+
+  const ops = []; let active = null, pendLoc = null;
+  const nodF = tpl.fields.find(f => f.type === 'nodule');
+  const segOf = i => t.slice(acc[i].e, i + 1 < acc.length ? acc[i + 1].s : t.length).trim();
+  const locIn = x => /прав/.test(x) ? 'правая доля' : /лев/.test(x) ? 'левая доля' : /переш/.test(x) ? 'перешеек' : null;
+
+  const doDims = (f, seg) => {
+    const r = dimsFrom(f, seg, vals[f.id]);
+    if (!r.cnt) { ops.push({f, pending: true}); active = f.id; return; }
+    const op = {f, value: r.value};
+    if (r.value.length < f.n || hasNull(r.value)) { op.warn = 'жду остальные размеры'; active = f.id; }
+    if (r.extra.length) op.warn = 'лишние числа отброшены: ' + r.extra.map(fmt).join(', ');
+    ops.push(op);
+  };
+  const doEnum = (f, seg, strict) => {
+    const h = f.opts.filter(([, k]) => new RegExp(k).test(seg));
+    if (h.length) {
+      const ab = h.filter(o => o[0] !== f.normal);
+      ops.push({f, value: (f.multi ? (ab.length ? ab : h) : [h[0]]).map(o => o[0]).join(', ')}); return;
+    }
+    if (strict) return;
+    if (seg) { ops.push({f, value: fixTerms(seg), warn: 'записано как свободный текст'}); return; }
+    ops.push({f, pending: true}); active = f.id;
+  };
+  const doNod = (seg, loc, alias) => {
+    if (NONE.test((alias || '') + ' ' + seg)) { ops.push({f: nodF, nodNone: true}); return; }
+    const nums = parseNumbers(seg).slice(0, 3);
+    loc = loc || locIn(seg);
+    if (!nums.length) { ops.push({f: nodF, pending: true}); active = nodF.id; pendLoc = loc; return; }
+    ops.push({f: nodF, nod: {loc: loc || '—', dims: nums, desc: nodDescr(seg)}, warn: nums.length < 3 ? 'у узла меньше 3 размеров' : undefined});
+  };
+
+  for (let i = 0; i < acc.length; i++) {
+    const m = acc[i], f = m.f; let seg = segOf(i);
+    if (f.type === 'dims') doDims(f, seg);
+    else if (f.type === 'enum') doEnum(f, seg);
+    else if (f.type === 'nodule') {
+      let loc = locIn(m.txt);
+      // «узловые образования … правая доля … образование размерами 10 на 15 на 20» — это один узел, а не три поля
+      while (!parseNumbers(seg).length && !NONE.test(m.txt + ' ' + seg) && i + 1 < acc.length && (acc[i + 1].f.lobe || acc[i + 1].f.type === 'nodule')) {
+        i++; loc = acc[i].f.lobe || locIn(acc[i].txt) || loc; seg = segOf(i);
+      }
+      doNod(seg, loc, m.txt);
+    } else if (f.type === 'note') { ops.push(seg ? {f, note: fixTerms(seg).replace(/^./, c => c.toUpperCase())} : {f, pending: true}); active = f.id; }
+  }
+
+  let command = null;
+  const short = t.split(' ').length <= 2;
+  if (!acc.length) {
+    if (!short) { /* длинная фраза — не команда */ }
+    else if (new RegExp(B + '(отмен\\S*|назад|удали\\S*)').test(t)) command = 'undo';
+    else if (new RegExp(B + 'повтор\\S*').test(t)) command = 'repeat';
+    else if (new RegExp(B + '(стоп|хватит|законч\\S*|выключ\\S*)').test(t)) command = 'stop';
+    if (!command && ctx.active) {              // продолжение ранее названного поля
+      const f = tpl.fields.find(x => x.id === ctx.active);
+      if (f && f.type === 'dims') { if (dimsFrom(f, t, vals[f.id]).cnt) doDims(f, t); }
+      else if (f && f.type === 'enum') doEnum(f, t, true);
+      else if (f && f.type === 'nodule') { if (parseNumbers(t).length) doNod(t, ctx.pendLoc); }
+      else if (f && f.type === 'note' && t) { ops.push({f, noteAppend: fixTerms(t)}); active = f.id; }   // длинное примечание приходит кусками
+    }
+  }
+  return {ops, command, text: t, active, pendLoc};
+}
+
+/* ===================== СОСТОЯНИЕ И РАСЧЁТЫ ===================== */
+const newState = () => ({vals: {}, nods: [], nodNone: false, notes: []});
+
+function applyOps(st, ops) {
+  for (const op of ops) {
+    if (op.err || op.pending) continue;
+    if (op.nodNone) { st.nods = []; st.nodNone = true; }
+    else if (op.nod) { st.nods.push(op.nod); st.nodNone = false; }
+    else if (op.note) st.notes.push(op.note);
+    else if (op.noteAppend) { if (st.notes.length) st.notes[st.notes.length - 1] += ' ' + op.noteAppend; else st.notes.push(op.noteAppend.replace(/^./, c => c.toUpperCase())); }
+    else st.vals[op.f.id] = op.value;
+  }
+}
+
+function fieldStatus(f, v) {
+  if (v === undefined || v === null || v === '') return 'miss';
+  if (f.type === 'dims') {
+    if (v.length < f.n || hasNull(v)) return 'part';
+    if (f.norms && v.some((x, i) => x != null && f.norms[i] && ((f.norms[i].max != null && x > f.norms[i].max) || (f.norms[i].min != null && x < f.norms[i].min)))) return 'bad';
+    return 'ok';
+  }
+  if (f.type === 'enum') return f.normal && v !== f.normal ? 'bad' : 'ok';
+  return 'ok';
+}
+
+function thyroidCalc(st, sex) {
+  const vol = d => d && d.length === 3 && !hasNull(d) ? d[0] * d[1] * d[2] * 0.479 / 1000 : null;  // формула Brunn, мл
+  const vr = vol(st.vals.r), vl = vol(st.vals.l);
+  const total = vr != null && vl != null ? vr + vl : null;
+  const max = sex === 'm' ? 25 : 18;
+  return {vr, vl, total, max};
+}
+
+function valueText(f, v) {
+  if (f.type === 'dims') return fmtD(v) + ' мм';
+  return v;
+}
+function normText(f) {
+  if (f.type === 'dims' && f.norms) return '≤ ' + f.norms.map(n => n.max).join(' × ');
+  if (f.type === 'enum' && f.normal) return f.normal;
+  return '';
+}
+
+function buildProtocol(tplKey, st, opts) {
+  const tpl = TEMPLATES[tplKey];
+  const L = [];
+  L.push(tpl.title, '');
+  L.push('Пациент: ' + (opts.pname || '____________________') + (opts.page ? ', ' + opts.page + ' лет' : ''));
+  L.push('Дата: ' + opts.date, '');
+  const devs = [];
+  let org = null, parts = [];
+  const flushOrg = () => { if (org && parts.length) L.push(org + ': ' + parts.join('; ') + '.'); parts = []; };
+  for (const f of tpl.fields) {
+    if (f.type === 'note') continue;
+    if (f.org !== org) { flushOrg(); org = f.org; }
+    if (f.type === 'nodule') continue;
+    const v = st.vals[f.id];
+    if (v === undefined) continue;
+    const pl = f.plabel || (f.label.charAt(0).toLowerCase() + f.label.slice(1));
+    let s = pl + ' ' + valueText(f, v);
+    if (tplKey === 'thyroid' && (f.id === 'r' || f.id === 'l')) {
+      const c = thyroidCalc(st, opts.sex); const vv = f.id === 'r' ? c.vr : c.vl;
+      if (vv != null) s += ', объём ' + fmt(vv) + ' мл';
+    }
+    parts.push(s);
+    if (fieldStatus(f, v) === 'bad') devs.push(f.org + ': ' + pl + ' ' + valueText(f, v) + (f.type === 'dims' ? ' (ориентир ' + normText(f) + ')' : ''));
+  }
+  flushOrg();
+  if (tplKey === 'thyroid') {
+    const c = thyroidCalc(st, opts.sex);
+    if (c.total != null) {
+      L.push('Общий объём щитовидной железы: ' + fmt(c.total) + ' мл (ориентир для ' + (opts.sex === 'm' ? 'мужчин' : 'женщин') + ' до ' + c.max + ' мл).');
+      if (c.total > c.max) devs.unshift('Увеличение объёма щитовидной железы (' + fmt(c.total) + ' мл)');
+    }
+    if (st.nods.length) {
+      L.push('Узловые образования:');
+      st.nods.forEach((n, i) => L.push('  ' + (i + 1) + ') ' + n.loc + ' — ' + n.dims.map(fmt).join(' × ') + ' мм' + (n.desc ? ', ' + n.desc : '')));
+      devs.push('Узловые образования щитовидной железы (' + st.nods.length + ') — оценить по TI-RADS');
+    } else if (st.nodNone) L.push('Узловые образования: не выявлены.');
+  }
+  if (st.notes.length) { L.push(''); L.push('Примечание: ' + st.notes.map(x => x.replace(/[.\s]+$/, '')).join('. ') + '.'); }
+  L.push('', 'Заключение (черновик, проверяет врач):');
+  if (devs.length) devs.forEach(d => L.push('— ' + d));
+  else L.push('Измеренные параметры в пределах ориентировочных норм.');
+  L.push('', 'Врач: ____________________');
+  return L.join('\n');
+}
+
+/* ===================== ИНТЕРФЕЙС ===================== */
+if (typeof document !== 'undefined') {
+  const $ = id => document.getElementById(id);
+  const states = {thyroid: newState(), abd: newState()};
+  const history = {thyroid: [], abd: []};
+  let lastInterim = '', lastInterimAt = 0, active = null, pendLoc = null, activeAt = 0, heardAudio = false, fatal = false, tplKey = 'thyroid', lastSpoken = '', listening = false, speaking = false, ignoreUntil = 0, rec = null;
+  const today = new Date().toLocaleDateString('ru-RU');
+  $('today').textContent = today;
+
+  const st = () => states[tplKey];
+  const snapshot = () => { history[tplKey].push(JSON.stringify(st())); if (history[tplKey].length > 50) history[tplKey].shift(); };
+
+  function renderHelp() { $('help').innerHTML = TEMPLATES[tplKey].help.map(h => '<div>• ' + h.replace(/«([^»]+)»/g, '<code>$1</code>') + '</div>').join(''); }
+
+  function render(flashIds = []) {
+    const tpl = TEMPLATES[tplKey], s = st();
+    $('sexWrap').style.display = tplKey === 'thyroid' ? '' : 'none';
+    const tb = $('fields'); tb.innerHTML = '';
+    let org = null;
+    for (const f of tpl.fields) {
+      if (f.org && f.org !== org) { org = f.org; const r = tb.insertRow(); r.className = 'org'; const c = r.insertCell(); c.colSpan = 4; c.textContent = org; }
+      const r = tb.insertRow(); if (flashIds.includes(f.id)) r.className = 'flash';
+      r.insertCell().textContent = f.label;
+      const vc = r.insertCell(); vc.className = 'val';
+      const v = s.vals[f.id];
+      if (f.type === 'dims') {
+        const inp = document.createElement('input'); inp.type = 'text';
+        inp.placeholder = f.hint || (f.n > 1 ? f.n + ' размера, мм' : 'мм');
+        inp.value = v ? fmtD(v) : '';
+        inp.onchange = () => { snapshot(); const n = parseNumbers(inp.value).slice(0, f.n); if (n.length) s.vals[f.id] = n; else delete s.vals[f.id]; render([f.id]); };
+        vc.appendChild(inp);
+      } else if (f.type === 'enum') {
+        const sel = document.createElement('select');
+        sel.innerHTML = '<option value="">—</option>' + f.opts.map(([o]) => '<option' + (o === v ? ' selected' : '') + '>' + o + '</option>').join('');
+        if (v && !f.opts.some(([o]) => o === v)) { const o = document.createElement('option'); o.textContent = v; o.selected = true; sel.appendChild(o); }
+        sel.onchange = () => { snapshot(); if (sel.value) s.vals[f.id] = sel.value; else delete s.vals[f.id]; render([f.id]); };
+        vc.appendChild(sel);
+      } else if (f.type === 'nodule') {
+        if (!s.nods.length) vc.innerHTML = '<span class="note">' + (s.nodNone ? 'не выявлены' : 'нет данных') + '</span>';
+        s.nods.forEach((n, i) => {
+          const d = document.createElement('div'); d.className = 'nod';
+          d.textContent = (i + 1) + ') ' + n.loc + ': ' + n.dims.map(fmt).join(' × ') + ' мм' + (n.desc ? ', ' + n.desc : '');
+          const b = document.createElement('button'); b.textContent = '✕'; b.title = 'Удалить';
+          b.onclick = () => { snapshot(); s.nods.splice(i, 1); render(); };
+          d.appendChild(b); vc.appendChild(d);
+        });
+      } else if (f.type === 'note') {
+        vc.innerHTML = s.notes.length ? s.notes.map(x => '<div class="note">' + x.replace(/</g, '&lt;') + '</div>') .join('') : '<span class="note">—</span>';
+      }
+      const nc = r.insertCell(); nc.className = 'norm'; nc.textContent = normText(f);
+      const sc = r.insertCell();
+      const stt = f.type === 'nodule' ? (s.nods.length ? 'bad' : s.nodNone ? 'ok' : 'miss') : f.type === 'note' ? 'miss' : fieldStatus(f, v);
+      sc.className = 'st ' + stt;
+      sc.textContent = {ok: '✓', bad: '⚠', miss: '·', part: '…'}[stt];
+    }
+    // расчёты
+    const calc = $('calc');
+    if (tplKey === 'thyroid') {
+      const c = thyroidCalc(s, $('sex').value);
+      const bad = c.total != null && c.total > c.max;
+      calc.className = 'calc' + (bad ? ' bad' : '');
+      calc.innerHTML = 'Объём: правая доля <b>' + (c.vr != null ? fmt(c.vr) + ' мл' : '—') + '</b>, левая доля <b>' +
+        (c.vl != null ? fmt(c.vl) + ' мл' : '—') + '</b>, общий <b>' + (c.total != null ? fmt(c.total) + ' мл' : '—') + '</b>' +
+        ' <span class="note">(ориентир до ' + c.max + ' мл; формула 0,479 × Д × Ш × Т)</span>';
+    } else { calc.className = ''; calc.innerHTML = ''; }
+    $('proto').value = buildProtocol(tplKey, s, {pname: $('pname').value.trim(), page: $('page').value, date: today, sex: $('sex').value});
+  }
+
+  function logItem(cls, heard, res) {
+    const li = document.createElement('li'); li.className = cls;
+    li.innerHTML = '<div class="heard">«' + heard.replace(/</g, '&lt;') + '»</div><div class="res">' + res + '</div>';
+    $('log').prepend(li);
+  }
+
+  function speak(text) {
+    if (!$('readback').checked || !('speechSynthesis' in window) || !text) return;
+    lastSpoken = text;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; u.rate = 1.1;
+      speaking = true;
+      u.onend = u.onerror = () => { speaking = false; ignoreUntil = Date.now() + 500; };
+      speechSynthesis.speak(u);
+    } catch (e) { speaking = false; }
+  }
+
+  const mkCtx = () => ({active: Date.now() - activeAt < (active === 'note' ? 15000 : 30000) ? active : null, pendLoc, vals: st().vals});
+  function showActive() {
+    const f = active && TEMPLATES[tplKey].fields.find(x => x.id === active);
+    $('active').textContent = !f ? '' : f.type === 'note' ? '📝 Примечание: продолжайте диктовать. Закончить — «конец примечания» или назовите следующее поле'
+      : '⏳ Поле «' + f.label + '» ждёт значение — просто назовите его';
+  }
+  function handle(text) {
+    const r = parseUtterance(text, tplKey, mkCtx());
+    if (r.command === 'undo') { undo(); logItem('cmd', text, '↶ отменено'); return; }
+    if (r.command === 'repeat') { const t = lastSpoken; lastSpoken = ''; speak(t || 'нечего повторять'); logItem('cmd', text, '🔁 повтор'); return; }
+    if (r.command === 'endnote') { active = null; showActive(); logItem('cmd', text, '📝 примечание закончено'); return; }
+    if (r.command === 'stop') { stopMic(); logItem('cmd', text, '⏹ диктовка остановлена'); return; }
+    if (!r.ops.length) { logItem('err', text, '❌ поле не распознано — назовите поле ещё раз'); return; }
+    snapshot();
+    applyOps(st(), r.ops);
+    active = r.active; pendLoc = r.pendLoc; activeAt = Date.now(); showActive();
+    const lines = [], say = [];
+    for (const op of r.ops) {
+      if (op.pending) { lines.push('⏳ ' + op.f.label + ': жду значение'); say.push(op.f.label); continue; }
+      let t;
+      if (op.nodNone) t = 'узлы не выявлены';
+      else if (op.nod) t = 'узел, ' + (op.nod.loc !== '—' ? op.nod.loc + ', ' : '') + op.nod.dims.map(fmt).join(' на ');
+      else if (op.note || op.noteAppend) t = '';
+      else t = op.f.label + ', ' + (Array.isArray(op.value) ? op.value.filter(x => x != null).map(fmt).join(' на ') : op.value);
+      if (t) say.push(t);
+      lines.push('✅ ' + (op.noteAppend ? 'Примечание (продолжение): ' + op.noteAppend : op.nod ? 'Узел: ' + op.nod.loc + ' ' + op.nod.dims.map(fmt).join(' × ') + ' мм' + (op.nod.desc ? ', ' + op.nod.desc : '')
+        : op.nodNone ? 'Узловые образования: не выявлены' : op.note ? 'Примечание: ' + op.note : op.f.label + ': ' + valueText(op.f, op.value))
+        + (op.warn ? ' <span style="color:var(--warn)">(' + op.warn + ')</span>' : ''));
+    }
+    logItem(r.ops.some(o => o.pending) ? 'cmd' : 'ok', text, lines.join('<br>'));
+    render(r.ops.filter(o => !o.pending).map(o => o.f.id));
+    speak(say.join('. '));
+  }
+
+  function undo() {
+    const h = history[tplKey];
+    if (!h.length) return;
+    states[tplKey] = JSON.parse(h.pop()); active = null; showActive();
+    render();
+  }
+
+  // --- микрофон ---
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    $('mic').disabled = true; $('mic').textContent = '🎤 Недоступно';
+    $('sysmsg').innerHTML = 'Этот браузер не поддерживает распознавание речи. Откройте страницу в <b>Google Chrome</b> (компьютер или Android). Пока можно проверять разбор, вводя фразы в поле ниже.';
+  } else {
+    rec = new SR(); rec.lang = 'ru-RU'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 5;
+    rec.onresult = e => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i], txt = res[0].transcript;
+        if (speaking || Date.now() < ignoreUntil) continue;    // не слушать собственный голосовой повтор
+        if (res.isFinal) {
+          // из нескольких вариантов распознавания берём тот, который лучше ложится в шаблон
+          let best = txt.trim(), bs = -1e9;
+          for (let k = 0; k < res.length; k++) {
+            const a = res[k].transcript.trim(); if (!a) continue;
+            const r = parseUtterance(a, tplKey, mkCtx());
+            const sc = (r.command ? 3 : r.ops.reduce((x, o) => x + (o.pending ? 0.5 : o.warn ? 1 : 2), 0)) - k * 0.01;
+            if (sc > bs) { bs = sc; best = a; }
+          }
+          if (best) handle(best);
+        } else interim += txt;
+      }
+      $('interim').textContent = interim ? '… ' + interim : '';
+      lastInterim = interim; if (interim) lastInterimAt = Date.now();
+    };
+    const say = (h, bad) => { $('sysmsg').innerHTML = h; $('sysmsg').className = bad ? 'bad' : 'good'; };
+    const ERR = {
+      'not-allowed': 'Браузер не дал доступ к микрофону. Причины: страница открыта внутри приложения (Claude, Telegram, WhatsApp) или как файл с телефона; либо доступ запрещён — нажмите значок слева от адреса → Микрофон → Разрешить.',
+      'service-not-allowed': 'Распознавание речи запрещено в этом браузере/режиме. Откройте страницу в обычном Google Chrome по ссылке https://.',
+      'audio-capture': 'Микрофон не найден. Проверьте, что он подключён и выбран в настройках системы.',
+      'network': 'Нет связи с сервером распознавания Google. Проверьте интернет (в Chrome распознавание работает только онлайн).',
+      'language-not-supported': 'Русский язык распознавания недоступен в этом браузере.'
+    };
+    rec.onstart = () => say('🟢 Микрофон включён. Говорите: «правая доля 15 на 18 на 45».');
+    rec.onaudiostart = () => { heardAudio = true; };
+    rec.onspeechstart = () => say('🟢 Слышу речь, распознаю…');
+    rec.onerror = e => {
+      if (e.error === 'no-speech') { say('🟡 Микрофон включён, но звук не слышен. Проверьте, тот ли микрофон выбран и не выключен ли он.', true); return; }
+      if (e.error === 'aborted') return;
+      fatal = true; stopMic();
+      say('🔴 ' + (ERR[e.error] || 'Ошибка распознавания: ' + e.error), true);
+    };
+    // если Chrome оборвал сеанс, не выдав итог, — не теряем уже услышанный текст
+    rec.onend = () => { if (lastInterim && !fatal) { const x = lastInterim.trim(); lastInterim = ''; $('interim').textContent = ''; if (x) handle(x); }
+      if (listening) setTimeout(() => { try { rec.start(); } catch (e) {} }, 150); };
+  }
+  // «зависание»: текст услышан, но Chrome не отдаёт итог — через 2,5 с тишины завершаем фразу принудительно
+  setInterval(() => { if (listening && rec && lastInterim && Date.now() - lastInterimAt > 2500) { lastInterimAt = Date.now(); try { rec.stop(); } catch (e) {} } }, 500);
+  function startMic() { if (!rec) return; fatal = false;
+    if (!window.isSecureContext) { $('sysmsg').innerHTML = '🔴 Страница открыта небезопасным способом (файл с телефона или http://). Микрофон работает только по ссылке https:// или из файла на компьютере.'; $('sysmsg').className = 'bad'; }
+    listening = true; try { rec.start(); } catch (e) {} $('mic').classList.add('on'); $('mic').textContent = '⏹ Слушаю… (стоп)'; }
+  function stopMic() { listening = false; if (rec) try { rec.stop(); } catch (e) {} $('mic').classList.remove('on'); $('mic').textContent = '🎤 Начать диктовку'; $('interim').textContent = ''; }
+  $('mic').onclick = () => listening ? stopMic() : startMic();
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); $('mic').click(); }
+  });
+
+  // --- прочие кнопки ---
+  $('testBtn').onclick = () => { const t = $('testText').value.trim(); if (t) { handle(t); $('testText').value = ''; } };
+  $('testText').addEventListener('keydown', e => { if (e.key === 'Enter') $('testBtn').click(); });
+  $('undo').onclick = () => { undo(); logItem('cmd', 'кнопка', '↶ отменено'); };
+  $('reset').onclick = () => { snapshot(); states[tplKey] = newState(); render(); logItem('cmd', 'кнопка', 'шаблон очищен (можно отменить)'); };
+  $('tpl').onchange = () => { tplKey = $('tpl').value; active = null; showActive(); renderHelp(); render(); };
+  ['sex', 'pname', 'page'].forEach(id => $(id).addEventListener('input', () => render()));
+  $('copy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('proto').value); $('copy').textContent = 'Скопировано ✓'; }
+    catch (e) { $('proto').select(); document.execCommand && document.execCommand('copy'); $('copy').textContent = 'Выделено — Ctrl+C'; }
+    setTimeout(() => $('copy').textContent = 'Копировать', 1800);
+  };
+  $('print').onclick = () => { $('proto').style.height = $('proto').scrollHeight + 'px'; window.print(); $('proto').style.height = ''; };
+
+  if (location.protocol === 'file:') $('sysmsg').innerHTML += '<br><b>Страница открыта как файл:</b> Chrome в этом режиме не запоминает разрешение и будет спрашивать микрофон заново. По ссылке https:// разрешение даётся один раз, и страница работает на телефоне.';
+  // тема: в тёмном кабинете УЗИ удобнее тёмная
+  const setTheme = t => { document.documentElement.dataset.theme = t; $('theme').textContent = t === 'dark' ? '☀️' : '🌙'; try { localStorage.setItem('uziTheme', t); } catch (e) {} };
+  let th = null; try { th = localStorage.getItem('uziTheme'); } catch (e) {}
+  setTheme(th || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  // установка как приложения (работает только по https://)
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  let instEv = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEv = e; $('install').hidden = false; });
+  $('install').onclick = async () => { if (!instEv) return; instEv.prompt(); await instEv.userChoice; instEv = null; $('install').hidden = true; };
+  renderHelp(); render();
+}
+</script>
+</body>
+</html>

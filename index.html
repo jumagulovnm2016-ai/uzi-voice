@@ -83,11 +83,20 @@
   .nod{display:flex;gap:8px;align-items:center;margin:3px 0;font-size:14px}
   .nod button{padding:0 7px;font-size:12px;border-radius:6px;color:var(--mute)}
 
+  .tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:-4px}
+  .tab{border:none;border-radius:10px 10px 0 0;background:transparent;padding:10px 18px;font-weight:650;color:var(--mute);font-size:15px;margin-bottom:-2px;border-bottom:3px solid transparent}
+  .tab:hover{background:var(--acc-soft);color:var(--ink)}
+  .tab.on{color:var(--acc);border-bottom-color:var(--acc);background:var(--panel)}
+  .tab .cnt:not(:empty){display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--acc);color:#fff;font-size:12px;margin-left:4px}
+  :root[data-theme=dark] .tab .cnt:not(:empty){color:#062126}
+  #lesCard[hidden],#fieldsCard[hidden]{display:none}
+  @media(max-width:900px){.tab{padding:9px 10px;font-size:14px;flex:1}}
   h3.sub{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;font-weight:700}
   h3.sub .note{text-transform:none;letter-spacing:0;font-weight:400}
-  .les{display:grid;grid-template-columns:34px 1.1fr 1.4fr 1.1fr 2.6fr 30px;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel2)}
+  .les{display:grid;grid-template-columns:34px 1fr 1.4fr 1fr 30px;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel2)}
   .les.cur{border-color:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}
   .les.flash{animation:flash 1.4s}
+  .les label.dsc{grid-column:2/5}
   .les .num{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;margin-top:20px}
   :root[data-theme=dark] .les .num{color:#062126}
   .les label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;min-width:0}
@@ -96,13 +105,14 @@
   .les textarea{resize:vertical;min-height:38px;font:inherit;font-size:14px;line-height:1.4}
   .les .dims{font-weight:650;font-variant-numeric:tabular-nums}
   .les .vol{font-size:12px;color:var(--mute);text-transform:none;letter-spacing:0;margin-top:2px}
+  .les .del{grid-column:5;grid-row:1}
   .les .del,.nt .del{margin-top:20px;padding:2px 7px;color:var(--mute)}
   .nt{display:grid;grid-template-columns:1fr 30px;gap:8px;margin-bottom:8px}
   .nt textarea{width:100%;min-height:44px;resize:vertical;font:inherit;font-size:14px}
   .nt .del{margin-top:6px}
   .empty{color:var(--mute);font-size:14px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:8px}
   .empty.ok{color:var(--ok);border-color:var(--ok);border-style:solid;background:var(--ok-soft)}
-  @media(max-width:900px){.les{grid-template-columns:30px 1fr 30px}.les label{grid-column:2}.les .num{grid-row:1/span 4;margin-top:18px}.les .del{grid-column:3;grid-row:1}}
+  @media(max-width:900px){.les{grid-template-columns:30px 1fr 30px}.les label,.les label.dsc{grid-column:2}.les .num{grid-row:1/span 4;margin-top:18px}.les .del{grid-column:3;grid-row:1}}
   #sysmsg{background:var(--warn-soft);border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px;border-left:4px solid var(--warn)}
   #sysmsg.good{background:var(--ok-soft);border-left-color:var(--ok)}
   #sysmsg.bad{background:var(--bad-soft);border-left-color:var(--bad)}
@@ -185,6 +195,11 @@
     </div>
   </section>
 
+  <nav class="tabs full noprint" role="tablist">
+    <button class="tab on" id="tabOrgan" role="tab">🩺 <span id="tabOrganName">Шаблон</span></button>
+    <button class="tab" id="tabLes" role="tab">◉ Образования и примечания <span class="cnt" id="lesCnt"></span></button>
+  </nav>
+
   <section class="card" id="fieldsCard">
     <h2>Поля шаблона</h2>
     <table>
@@ -194,6 +209,21 @@
     </table>
     <div id="calc"></div>
     <p class="note">Нормы — ориентировочные, для прототипа. Перед реальным использованием сверьте с вашими стандартами (массив <code>TEMPLATES</code> в коде).</p>
+  </section>
+
+  <section class="card noprint" id="lesCard" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0" id="lesTitle">Образования и примечания</h2>
+      <div class="row">
+        <button id="addLes">＋ Образование</button>
+        <button id="noLes">Не выявлены</button>
+        <button id="addNote">＋ Примечание</button>
+      </div>
+    </div>
+    <div id="lesList"></div>
+    <h3 class="sub">Примечания <span class="note">— свободный текст</span></h3>
+    <div id="noteList"></div>
+    <p class="note">Всё можно диктовать или исправлять руками. Изменения сразу попадают в протокол.</p>
   </section>
 
   <section class="card noprint" id="logCard">
@@ -216,20 +246,6 @@
     </details>
   </section>
 
-  <section class="card full noprint" id="lesCard">
-    <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h2 style="margin:0" id="lesTitle">Образования и примечания</h2>
-      <div class="row">
-        <button id="addLes">＋ Образование</button>
-        <button id="noLes">Не выявлены</button>
-        <button id="addNote">＋ Примечание</button>
-      </div>
-    </div>
-    <div id="lesList"></div>
-    <h3 class="sub">Примечания <span class="note">— свободный текст</span></h3>
-    <div id="noteList"></div>
-    <p class="note">Всё можно диктовать или исправлять руками. Изменения сразу попадают в протокол.</p>
-  </section>
 
   <section class="card full">
     <div class="row noprint" style="justify-content:space-between;margin-bottom:8px">
@@ -329,6 +345,7 @@ const TEMPLATES = {
       '«контуры ровные», «эхогенность снижена», «структура неоднородная»',
       '«узел в правой доле 8 на 6 на 7 гипоэхогенный» … «с ровными контурами, кровоток периферический» — описание узла продолжается',
       '«конец описания» — закончить описание образования',
+      '«вернуться к шаблону» / «раздел образования» — переключить вкладку голосом',
       '«узловые образования не выявлены»',
       '«примечание …» — свободный текст',
       '«отмена» — отменить последнее, «повтори», «стоп»'
@@ -399,6 +416,7 @@ function lesKind(t) {
   if (/полип/.test(t)) return 'полип';
   if (/конкремент|камн|камен/.test(t)) return 'конкремент';
   if (/включени/.test(t)) return 'включение';
+  if (/кальцинат/.test(t)) return 'кальцинат';
   if (/узел|узл/.test(t)) return 'узел';
   if (/очаг/.test(t)) return 'очаговое образование';
   return 'образование';
@@ -454,9 +472,15 @@ function parseUtterance(text, tplKey, ctx) {
   ctx = ctx || {}; const vals = ctx.vals || {};
   const tpl = TEMPLATES[tplKey];
   const t = norm(text).replace(/[.,;:!?]+(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/(?:вкладк|раздел|перейти|переходим|открой)\S*\s+(?:к\s+|на\s+)?(?:образовани|узл|очаг)/.test(t)) return {ops: [], command: 'tab', tab: 'les', text: t};
+  if (/(?:вкладк|раздел|перейти|переходим|вернуться|вернись|открой)\S*\s+(?:к\s+|на\s+)?(?:шаблон|орган|основн|размер)/.test(t)) return {ops: [], command: 'tab', tab: 'organ', text: t};
+  const LES = ctx.mode === 'les';
   if (/конец (примечани|описани)|(примечани|описани)\S* (законч|конец)/.test(t)) return {ops: [], command: 'endnote', text: t, active: null, pendLoc: null};
   const found = [];
-  for (const f of tpl.fields) for (const a of f.al) {
+  // во вкладке «Образования» ищем только образования и примечания — поля органа не трогаем
+  const nodF0 = tpl.fields.find(f => f.type === 'nodule');
+  const srcF = LES ? [{...nodF0, al: nodF0.al.concat(['конкремент\\S*', 'камн\\S*', 'камен\\S*', 'кальцинат\\S*', 'полип\\S*', 'кист\\S*'])}, tpl.fields.find(f => f.type === 'note')] : tpl.fields;
+  for (const f of srcF) for (const a of f.al) {
     const re = new RegExp(B + '(?:' + a + ')', 'g'); let m;
     while ((m = re.exec(t))) { found.push({s: m.index, e: m.index + m[0].length, f, txt: m[0]}); if (!m[0].length) re.lastIndex++; }
   }
@@ -469,23 +493,16 @@ function parseUtterance(text, tplKey, ctx) {
   if (actF && actF.type === 'note' && acc.length && acc[0].s > 0) acc.length = 0;
   const nodF = tpl.fields.find(f => f.type === 'nodule');
   const pend = actF && actF.type === 'nodule' ? ctx.pendLoc : null;            // образование названо, ждём размеры
-  const describing = actF && actF.type === 'nodule' && !ctx.pendLoc;          // образование записано, идёт его описание
-  let descPrefix = '';
-  if (describing) {
-    // фраза, начатая с названия поля («эхогенность печени повышена»), идёт в поле;
-    // остальное («с ровными контурами», «кровоток в узле периферический») — описание последнего образования
-    const nodMid = acc.some(m => m.f.type === 'nodule' && m.s > 0 && !NONE.test(t.slice(m.s)) && !lesNums(t.slice(m.e)).length);
-    const k = nodMid ? [] : acc.filter(m => m.f.type !== 'enum' || m.f.lesion || m.s === 0);
+  if (LES) {
+    // «кровоток в узле периферический» — слово «узел» внутри описания не начинает новое образование
+    const k = acc.filter(m => m.f.type !== 'nodule' || m.s === 0 || NONE.test(t.slice(m.s)) || lesNums(t.slice(m.e)).length);
     acc.length = 0; acc.push(...k);
-    descPrefix = (acc.length ? t.slice(0, acc[0].s) : t).trim();
-    if (/^(в|во|из|и|с|на)?$/.test(descPrefix)) descPrefix = '';
   }
   if (pend && acc.length && acc[0].f.lobe && /^(в|во|из)?\s*$/.test(t.slice(0, acc[0].s)))
     acc.unshift({s: 0, e: 0, f: nodF, txt: '', pend});                       // «… в правой доле 10 на 12» после «образование»
   const ni = acc.findIndex(m => m.f.type === 'note'); if (ni >= 0) acc.length = ni + 1;   // примечание забирает всё до конца фразы
 
   const ops = []; let active = null, pendLoc = null;
-  if (descPrefix) { ops.push({f: nodF, descAppend: descPrefix}); active = nodF.id; }
   const segOf = i => t.slice(acc[i].e, i + 1 < acc.length ? acc[i + 1].s : t.length).trim();
 
   const doDims = (f, seg) => {
@@ -511,6 +528,8 @@ function parseUtterance(text, tplKey, ctx) {
     const nums = lesNums(seg), ls = locFrom(seg, tplKey);
     loc = ls && /сегмент/.test(ls) ? ls : loc || ls;
     if (!nums.length) { ops.push({f: nodF, pending: true, kind}); active = nodF.id; pendLoc = {loc, kind}; return; }
+    const gbc = tpl.fields.find(x => x.lesion === kind && (!loc || loc === x.lesionLoc));
+    if (LES && gbc) ops.push({f: gbc, value: gbc.opts.find(o => o[0] !== gbc.normal)[0]});
     ops.push({f: nodF, nod: {kind, loc: loc || '', dims: nums, desc: descFrom(seg)}, warn: nums.length < 3 && kind !== 'конкремент' && kind !== 'полип' ? 'меньше 3 размеров' : undefined});
     active = nodF.id;                                                          // дальше можно продиктовать описание
   };
@@ -522,6 +541,17 @@ function parseUtterance(text, tplKey, ctx) {
     return {i, seg, loc, txt};
   };
 
+  if (LES) {
+    // текст до первого слова-триггера: продолжение примечания, размеры названного образования или его описание
+    const pre = (acc.length ? t.slice(0, acc[0].s) : t).trim();
+    const noteF = tpl.fields.find(f => f.type === 'note');
+    if (pre && !/^(в|во|из|и|с|на)$/.test(pre)) {
+      if (ctx.active === 'note') { ops.push({f: noteF, noteAppend: fixTerms(pre)}); active = 'note'; }
+      else if (ctx.pendLoc) doNod(pre, ctx.pendLoc.loc, ctx.pendLoc.kind);
+      else if (ctx.active === 'nod' && ctx.nodCount) { ops.push({f: nodF, descAppend: fixTerms(pre)}); active = 'nod'; }
+      else if (lesNums(pre).length) doNod(pre, null, tplKey === 'thyroid' ? 'узел' : 'образование');
+    }
+  }
   for (let i = 0; i < acc.length; i++) {
     const m = acc[i], f = m.f; let seg = segOf(i);
     if (f.type === 'dims') doDims(f, seg);
@@ -534,7 +564,7 @@ function parseUtterance(text, tplKey, ctx) {
     else if (f.type === 'enum') doEnum(f, seg);
     else if (f.type === 'nodule') {
       const r = absorb(i, seg, m.pend ? m.pend.loc : locFrom(m.txt, tplKey), m.txt); i = r.i;
-      const kind = m.pend ? m.pend.kind : tplKey === 'thyroid' && !/кист/.test(r.txt) ? 'узел' : lesKind(r.txt);
+      const kind = m.pend ? m.pend.kind : tplKey === 'thyroid' && !/кист|кальцинат/.test(r.txt) ? 'узел' : lesKind(r.txt);
       doNod(r.seg, r.loc, kind, r.txt);
     } else if (f.type === 'note') { ops.push(seg ? {f, note: cap(fixTerms(seg))} : {f, pending: true}); active = f.id; }
   }
@@ -547,7 +577,7 @@ function parseUtterance(text, tplKey, ctx) {
     else if (new RegExp(B + 'повтор\\S*').test(t)) command = 'repeat';
     else if (new RegExp(B + '(стоп|хватит|законч\\S*|выключ\\S*)').test(t)) command = 'stop';
     if (/конец описани|описани\S* (законч|конец)/.test(t)) command = 'enddesc';
-    if (!command && ctx.active) {              // продолжение ранее названного поля
+    if (!command && ctx.active && !LES) {      // продолжение ранее названного поля
       const f = tpl.fields.find(x => x.id === ctx.active);
       if (f && f.type === 'dims') { if (dimsFrom(f, t, vals[f.id]).cnt) doDims(f, t); }
       else if (f && f.type === 'enum') doEnum(f, t, true);
@@ -555,7 +585,8 @@ function parseUtterance(text, tplKey, ctx) {
       else if (f && f.type === 'note' && t) { ops.push({f, noteAppend: fixTerms(t)}); active = f.id; }   // длинное примечание приходит кусками
     }
   }
-  return {ops, command, text: t, active, pendLoc};
+  const switchTo = !LES && ops.some(o => o.nod || (o.pending && o.f.type === 'nodule')) ? 'les' : null;
+  return {ops, command, text: t, active, pendLoc, switchTo};
 }
 
 /* ===================== СОСТОЯНИЕ И РАСЧЁТЫ ===================== */
@@ -662,7 +693,7 @@ if (typeof document !== 'undefined') {
   const $ = id => document.getElementById(id);
   const states = {thyroid: newState(), abd: newState()};
   const history = {thyroid: [], abd: []};
-  let lastInterim = '', lastInterimAt = 0, active = null, pendLoc = null, activeAt = 0, heardAudio = false, fatal = false, tplKey = 'thyroid', lastSpoken = '', listening = false, speaking = false, ignoreUntil = 0, rec = null;
+  let mode = 'organ', lastInterim = '', lastInterimAt = 0, active = null, pendLoc = null, activeAt = 0, heardAudio = false, fatal = false, tplKey = 'thyroid', lastSpoken = '', listening = false, speaking = false, ignoreUntil = 0, rec = null;
   const today = new Date().toLocaleDateString('ru-RU');
   $('today').textContent = today;
 
@@ -724,6 +755,7 @@ if (typeof document !== 'undefined') {
         ' <span class="note">(ориентир до ' + c.max + ' мл; формула 0,479 × Д × Ш × Т)</span>';
     } else { calc.className = ''; calc.innerHTML = ''; }
     renderLes(flashIds);
+    $('lesCnt').textContent = s.nods.length || ''; $('tabOrganName').textContent = tplKey === 'thyroid' ? 'Щитовидная железа' : 'Органы брюшной полости';
     $('proto').value = buildProtocol(tplKey, s, {pname: $('pname').value.trim(), page: $('page').value, date: today, sex: $('sex').value});
   }
 
@@ -752,7 +784,7 @@ if (typeof document !== 'undefined') {
         '<label>Локализация<input type="text" data-k="loc" list="dlL" value="' + esc(n.loc) + '"></label>' +
         '<label>Размеры, мм<input type="text" data-k="dims" class="dims" value="' + esc(n.dims.map(fmt).join(' × ')) + '" placeholder="Д × Ш × Т">' +
           '<span class="vol">' + (v != null ? 'V ≈ ' + fmt(v) + ' мл' : '&nbsp;') + '</span></label>' +
-        '<label>Описание<textarea data-k="desc" rows="2" placeholder="эхогенность, контуры, структура, кровоток…">' + esc(n.desc) + '</textarea></label>' +
+        '<label class="dsc">Описание<textarea data-k="desc" rows="2" placeholder="эхогенность, контуры, структура, кровоток…">' + esc(n.desc) + '</textarea></label>' +
         '<button class="del" title="Удалить">✕</button>';
       d.querySelectorAll('[data-k]').forEach(el => el.onchange = () => {
         snapshot(); const k = el.dataset.k;
@@ -792,12 +824,19 @@ if (typeof document !== 'undefined') {
     } catch (e) { speaking = false; }
   }
 
-  const mkCtx = () => ({active: Date.now() - activeAt < (active === 'note' || (active === 'nod' && !pendLoc) ? 15000 : 30000) ? active : null, pendLoc, vals: st().vals});
+  const mkCtx = () => ({active: mode === 'les' || Date.now() - activeAt < (active === 'note' ? 15000 : 30000) ? active : null, pendLoc, vals: st().vals, mode, nodCount: st().nods.length});
+  function setTab(m, keep) {
+    mode = m; if (!keep) { active = null; pendLoc = null; }
+    $('tabOrgan').classList.toggle('on', m === 'organ'); $('tabLes').classList.toggle('on', m === 'les');
+    $('fieldsCard').hidden = m !== 'organ'; $('lesCard').hidden = m !== 'les';
+    showActive(); render();
+  }
+  $('tabOrgan').onclick = () => setTab('organ'); $('tabLes').onclick = () => setTab('les');
   function showActive() {
     const f = active && TEMPLATES[tplKey].fields.find(x => x.id === active);
     const n = st().nods.length;
-    $('active').textContent = !f ? '' : f.type === 'note' ? '📝 Примечание: продолжайте диктовать. Закончить — «конец примечания» или назовите следующее поле'
-      : f.type === 'nodule' && !pendLoc ? '📝 Описание образования №' + n + ': продолжайте («с ровными контурами…»). Закончить — «конец описания» или назовите поле'
+    $('active').textContent = !f ? (mode === 'les' ? '◉ Вкладка «Образования»: назовите образование («узел…», «киста…») или «примечание». Поля органа здесь не заполняются' : '') : f.type === 'note' ? '📝 Примечание: продолжайте диктовать. Закончить — «конец примечания» или назовите следующее поле'
+      : f.type === 'nodule' && !pendLoc ? '📝 Описание образования №' + n + ': диктуйте всё подряд. Новое — «узел…», «киста…»; закончить — «конец описания»; поля органа — «вернуться к шаблону»'
       : f.type === 'nodule' ? '⏳ ' + cap(pendLoc.kind || 'образование') + (pendLoc.loc ? ', ' + pendLoc.loc : '') + ': назовите размеры'
       : '⏳ Поле «' + f.label + '» ждёт значение — просто назовите его';
   }
@@ -806,12 +845,15 @@ if (typeof document !== 'undefined') {
     if (r.command === 'undo') { undo(); logItem('cmd', text, '↶ отменено'); return; }
     if (r.command === 'repeat') { const t = lastSpoken; lastSpoken = ''; speak(t || 'нечего повторять'); logItem('cmd', text, '🔁 повтор'); return; }
     if (r.command === 'endnote') { const w = active === 'nod' ? 'описание образования закончено' : 'примечание закончено'; active = null; pendLoc = null; showActive(); render(); logItem('cmd', text, '📝 ' + w); return; }
+    if (r.command === 'tab') { setTab(r.tab); logItem('cmd', text, '↔ вкладка «' + (r.tab === 'les' ? 'Образования и примечания' : 'Шаблон') + '»'); speak(r.tab === 'les' ? 'образования' : 'шаблон'); return; }
     if (r.command === 'stop') { stopMic(); logItem('cmd', text, '⏹ диктовка остановлена'); return; }
-    if (!r.ops.length) { logItem('err', text, '❌ поле не распознано — назовите поле ещё раз'); return; }
-    snapshot();
+    if (!r.ops.length) { logItem('err', text, mode === 'les' ? '❌ не понял — назовите образование («узел…», «киста…») или «примечание». Для полей органа скажите «вернуться к шаблону»' : '❌ поле не распознано — назовите поле ещё раз'); return; }
+    snapshot(); const lines0 = [];
     applyOps(st(), r.ops);
-    active = r.active; pendLoc = r.pendLoc; activeAt = Date.now(); showActive();
-    const lines = [], say = [];
+    active = r.active; pendLoc = r.pendLoc; activeAt = Date.now();
+    if (r.switchTo && mode !== r.switchTo) { setTab(r.switchTo, true); lines0.push('↔ перешёл во вкладку «Образования и примечания»'); }
+    showActive();
+    const lines = lines0, say = [];
     for (const op of r.ops) {
       if (op.pending) { const nm = op.f.type === 'nodule' ? cap(op.kind || 'образование') : op.f.label; lines.push('⏳ ' + nm + ': жду ' + (op.f.type === 'nodule' ? 'размеры' : 'значение')); say.push(nm); continue; }
       if (op.descAppend) { lines.push('✅ Описание образования №' + st().nods.length + ': ' + esc(op.descAppend)); continue; }
@@ -906,7 +948,7 @@ if (typeof document !== 'undefined') {
     const t = $('noteList').querySelectorAll('textarea'); const el = t[t.length - 1]; if (el) el.focus(); };
   $('undo').onclick = () => { undo(); logItem('cmd', 'кнопка', '↶ отменено'); };
   $('reset').onclick = () => { snapshot(); states[tplKey] = newState(); render(); logItem('cmd', 'кнопка', 'шаблон очищен (можно отменить)'); };
-  $('tpl').onchange = () => { tplKey = $('tpl').value; active = null; showActive(); renderHelp(); render(); };
+  $('tpl').onchange = () => { tplKey = $('tpl').value; active = null; pendLoc = null; showActive(); renderHelp(); render(); };
   ['sex', 'pname', 'page'].forEach(id => $(id).addEventListener('input', () => render()));
   $('copy').onclick = async () => {
     try { await navigator.clipboard.writeText($('proto').value); $('copy').textContent = 'Скопировано ✓'; }

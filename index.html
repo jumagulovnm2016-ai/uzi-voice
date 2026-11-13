@@ -83,6 +83,26 @@
   .nod{display:flex;gap:8px;align-items:center;margin:3px 0;font-size:14px}
   .nod button{padding:0 7px;font-size:12px;border-radius:6px;color:var(--mute)}
 
+  h3.sub{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;font-weight:700}
+  h3.sub .note{text-transform:none;letter-spacing:0;font-weight:400}
+  .les{display:grid;grid-template-columns:34px 1.1fr 1.4fr 1.1fr 2.6fr 30px;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel2)}
+  .les.cur{border-color:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}
+  .les.flash{animation:flash 1.4s}
+  .les .num{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;margin-top:20px}
+  :root[data-theme=dark] .les .num{color:#062126}
+  .les label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;min-width:0}
+  .les input,.les textarea{width:100%;min-width:0;color:var(--ink);font-size:14px;text-transform:none;letter-spacing:0}
+  .les input,.les textarea,.nt textarea{background:var(--panel)}
+  .les textarea{resize:vertical;min-height:38px;font:inherit;font-size:14px;line-height:1.4}
+  .les .dims{font-weight:650;font-variant-numeric:tabular-nums}
+  .les .vol{font-size:12px;color:var(--mute);text-transform:none;letter-spacing:0;margin-top:2px}
+  .les .del,.nt .del{margin-top:20px;padding:2px 7px;color:var(--mute)}
+  .nt{display:grid;grid-template-columns:1fr 30px;gap:8px;margin-bottom:8px}
+  .nt textarea{width:100%;min-height:44px;resize:vertical;font:inherit;font-size:14px}
+  .nt .del{margin-top:6px}
+  .empty{color:var(--mute);font-size:14px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:8px}
+  .empty.ok{color:var(--ok);border-color:var(--ok);border-style:solid;background:var(--ok-soft)}
+  @media(max-width:900px){.les{grid-template-columns:30px 1fr 30px}.les label{grid-column:2}.les .num{grid-row:1/span 4;margin-top:18px}.les .del{grid-column:3;grid-row:1}}
   #sysmsg{background:var(--warn-soft);border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:10px;border-left:4px solid var(--warn)}
   #sysmsg.good{background:var(--ok-soft);border-left-color:var(--ok)}
   #sysmsg.bad{background:var(--bad-soft);border-left-color:var(--bad)}
@@ -127,7 +147,7 @@
   }
   @media print{
     :root,:root[data-theme=dark]{--ink:#000;--paper:#fff;--line:#fff;--panel:#fff;--bg:#fff}
-    header,.noprint,#logCard,#fieldsCard{display:none!important}
+    header,.noprint,#logCard,#fieldsCard,#lesCard{display:none!important}
     main{display:block;padding:0}
     .card{border:none;padding:0;box-shadow:none}
     #proto{border:none;min-height:0;height:auto;padding:0;color:#000}
@@ -194,6 +214,21 @@
       <summary>Как диктовать (примеры)</summary>
       <div id="help" class="note" style="margin-top:8px"></div>
     </details>
+  </section>
+
+  <section class="card full noprint" id="lesCard">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0" id="lesTitle">Образования и примечания</h2>
+      <div class="row">
+        <button id="addLes">＋ Образование</button>
+        <button id="noLes">Не выявлены</button>
+        <button id="addNote">＋ Примечание</button>
+      </div>
+    </div>
+    <div id="lesList"></div>
+    <h3 class="sub">Примечания <span class="note">— свободный текст</span></h3>
+    <div id="noteList"></div>
+    <p class="note">Всё можно диктовать или исправлять руками. Изменения сразу попадают в протокол.</p>
   </section>
 
   <section class="card full">
@@ -276,7 +311,7 @@ const TEMPLATES = {
       {id:'str', org:'Щитовидная железа', label:'Структура', type:'enum', al:['структур\\S*','эхоструктур\\S*'],
         opts:[['неоднородная','неоднород'],['однородная','однород']], normal:'однородная'},
       {id:'nod', org:'Щитовидная железа', label:'Узловые образования', type:'nodule',
-        al:['(?:узлов\\S*\\s+образовани\\S*|узел|узл\\S*|образовани\\S*)(?:\\s+(?:в\\s+)?(?:прав\\S*|лев\\S*)\\s+дол\\S*|\\s+(?:в\\s+)?переше\\S*)?']},
+        al:['(?:узлов\\S*\\s+образовани\\S*|узел|узл\\S*|образовани\\S*|кист\\S*)(?:\\s+(?:в\\s+)?(?:прав\\S*|лев\\S*)\\s+дол\\S*|\\s+(?:в\\s+)?переше\\S*)?']},
       {id:'cdk', org:'Щитовидная железа', label:'Кровоток (ЦДК)', plabel:'кровоток при ЦДК', type:'enum', al:['кровоток\\S*','васкуляризаци\\S*'],
         opts:[['не изменён','не измен|не усил|норм|обычн'],['усилен','усил|повыш|гиперваскул'],['снижен','сниж|обедн']], normal:'не изменён'},
       {id:'ln', org:'Щитовидная железа', label:'Регионарные лимфоузлы', type:'enum', al:['(?:регионарн\\S*\\s+)?лимфоузл\\S*','(?:регионарн\\S*\\s+)?лимфатическ\\S*\\s+узл\\S*'],
@@ -292,7 +327,8 @@ const TEMPLATES = {
       '«левая доля 14 18 44 перешеек 4» — несколько полей в одной фразе',
       '«правая доля полтора сантиметра на 1,8 на 4,5» — сантиметры переводятся в мм',
       '«контуры ровные», «эхогенность снижена», «структура неоднородная»',
-      '«узел в правой доле 8 на 6 на 7 гипоэхогенный»',
+      '«узел в правой доле 8 на 6 на 7 гипоэхогенный» … «с ровными контурами, кровоток периферический» — описание узла продолжается',
+      '«конец описания» — закончить описание образования',
       '«узловые образования не выявлены»',
       '«примечание …» — свободный текст',
       '«отмена» — отменить последнее, «повтори», «стоп»'
@@ -301,25 +337,30 @@ const TEMPLATES = {
   abd: {
     title: 'УЛЬТРАЗВУКОВОЕ ИССЛЕДОВАНИЕ ОРГАНОВ БРЮШНОЙ ПОЛОСТИ',
     fields: [
-      {id:'lr', org:'Печень', label:'Правая доля (КВР)', plabel:'правая доля (КВР)', type:'dims', n:1, al:['прав\\S*\\s+дол\\S*(?:\\s+печен\\S*)?','квр'], norms:[{max:150}]},
-      {id:'ll', org:'Печень', label:'Левая доля (толщина)', plabel:'левая доля (толщина)', type:'dims', n:1, al:['лев\\S*\\s+дол\\S*(?:\\s+печен\\S*)?'], norms:[{max:60}]},
+      {id:'lr', org:'Печень', label:'Правая доля (КВР)', lobe:'правая доля печени', plabel:'правая доля (КВР)', type:'dims', n:1, al:['прав\\S*\\s+дол\\S*(?:\\s+печен\\S*)?','квр'], norms:[{max:150}]},
+      {id:'ll', org:'Печень', label:'Левая доля (толщина)', lobe:'левая доля печени', plabel:'левая доля (толщина)', type:'dims', n:1, al:['лев\\S*\\s+дол\\S*(?:\\s+печен\\S*)?'], norms:[{max:60}]},
       {id:'lecho', org:'Печень', label:'Эхогенность печени', plabel:'эхогенность', type:'enum', al:['эхогенн\\S*(?:\\s+печен\\S*)?'],
         opts:[['повышена','повыш'],['снижена','сниж|пониж'],['не изменена','средн|обычн|не измен|норм|сохран']], normal:'не изменена'},
       {id:'pv', org:'Печень', label:'Воротная вена', type:'dims', n:1, al:['воротн\\S*(?:\\s+вен\\S*)?'], norms:[{max:13}]},
       {id:'chd', org:'Печень', label:'Холедох', type:'dims', n:1, al:['холедох\\S*','общ\\S*\\s+желчн\\S*\\s+проток\\S*'], norms:[{max:6}]},
-      {id:'gb', org:'Желчный пузырь', label:'Размеры (Д × Ш)', plabel:'размеры', type:'dims', n:2, al:['желчн\\S*(?:\\s+пузыр\\S*)?'], norms:[{max:100},{max:35}]},
+      {id:'gb', org:'Желчный пузырь', label:'Размеры (Д × Ш)', lobe:'желчный пузырь', plabel:'размеры', type:'dims', n:2, al:['желчн\\S*(?:\\s+пузыр\\S*)?'], norms:[{max:100},{max:35}]},
       {id:'gbw', org:'Желчный пузырь', label:'Стенка', type:'dims', n:1, al:['стенк\\S*(?:\\s+желчн\\S*(?:\\s+пузыр\\S*)?)?'], norms:[{max:3}]},
-      {id:'gbc', org:'Желчный пузырь', label:'Конкременты', type:'enum', al:['конкремент\\S*','камн\\S*','камен\\S*'],
+      {id:'gbc', org:'Желчный пузырь', label:'Конкременты', lesion:'конкремент', lesionLoc:'желчный пузырь', type:'enum', al:['конкремент\\S*','камн\\S*','камен\\S*'],
         opts:[['не выявлены','нет|не выяв|не обнаруж|отсутств|не визуал'],['выявлены','есть|выяв|обнаруж|множеств|единичн|визуал']], normal:'не выявлены'},
-      {id:'ph', org:'Поджелудочная железа', label:'Головка', type:'dims', n:1, al:['головк\\S*(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:32}]},
-      {id:'pb', org:'Поджелудочная железа', label:'Тело', type:'dims', n:1, al:['тел[оау](?![а-я])(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:21}]},
-      {id:'pt', org:'Поджелудочная железа', label:'Хвост', type:'dims', n:1, al:['хвост\\S*(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:30}]},
+      {id:'ph', org:'Поджелудочная железа', label:'Головка', lobe:'головка поджелудочной железы', type:'dims', n:1, al:['головк\\S*(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:32}]},
+      {id:'pb', org:'Поджелудочная железа', label:'Тело', lobe:'тело поджелудочной железы', type:'dims', n:1, al:['тел[оау](?![а-я])(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:21}]},
+      {id:'pt', org:'Поджелудочная железа', label:'Хвост', lobe:'хвост поджелудочной железы', type:'dims', n:1, al:['хвост\\S*(?:\\s+поджелуд\\S*(?:\\s+желез\\S*)?)?'], norms:[{max:30}]},
       {id:'pecho', org:'Поджелудочная железа', label:'Эхогенность', type:'enum', al:['эхогенн\\S*\\s+поджелуд\\S*(?:\\s+желез\\S*)?','эхогенн\\S*\\s+железы'],
         opts:[['повышена','повыш'],['снижена','сниж|пониж'],['не изменена','средн|обычн|не измен|норм|сохран']], normal:'не изменена'},
-      {id:'sp', org:'Селезёнка', label:'Размеры (Д × Т)', plabel:'размеры', type:'dims', n:2, al:['селезенк\\S*'], norms:[{max:120},{max:50}]},
+      {id:'sp', org:'Селезёнка', label:'Размеры (Д × Т)', lobe:'селезёнка', plabel:'размеры', type:'dims', n:2, al:['селезенк\\S*'], norms:[{max:120},{max:50}]},
+      {id:'nod', org:'', label:'Очаговые образования', type:'nodule',
+        al:['(?:очагов\\S*\\s+образовани\\S*|образовани\\S*|кист\\S*|гемангиом\\S*|полип\\S*|очаг\\S*|включени\\S*|узел|узл\\S*)']},
       {id:'note', org:'', label:'Примечание', type:'note', al:['примечани\\S*','дополнительно']}
     ],
     help: [
+      '«киста в правой доле печени 12 на 10 на 9 анэхогенная» … «с ровными контурами» — описание продолжается',
+      '«конкремент в желчном пузыре 8 мм», «полип желчного пузыря 4 мм», «киста левой почки 30 на 25»',
+      '«очаговые образования не выявлены»',
       '«правая доля 145 левая доля 55»',
       '«воротная вена 11 холедох 4»',
       '«желчный пузырь 70 на 25 стенка 2 конкрементов нет»',
@@ -346,9 +387,50 @@ function nodDescr(t) {
 const DIMKEY = {'длин':0,'ширин':1,'толщин':2,'высот':2,'переднезадн':2};
 const hasNull = v => v.some(x => x == null);
 const fmtD = v => v.map(x => x == null ? '?' : fmt(x)).join(' × ');
-const TERMS = [[/перинадулярн/g,'перинодулярн'],[/интранадулярн/g,'интранодулярн'],[/эхагенн/g,'эхогенн'],[/гипоэхогены(?![а-я])/g,'гипоэхогенный']];
+const TERMS = [[/перинадулярн/g,'перинодулярн'],[/интранадулярн/g,'интранодулярн'],[/эхагенн/g,'эхогенн'],[/гипоэхогены(?![а-я])/g,'гипоэхогенный'],[/четк/g,'чётк'],[/(?<![а-я])еще(?![а-я])/g,'ещё']];
 const fixTerms = t => TERMS.reduce((x, [a, b]) => x.replace(a, b), t);
 const NONE = /не\s*(выяв|обнаруж|визуал|определ)|(?<![а-я])нет(?![а-я])|отсутств/;
+const cap = x => x ? x.charAt(0).toUpperCase() + x.slice(1) : x;
+
+function lesKind(t) {
+  if (/кистозн/.test(t)) return 'кистозное образование';
+  if (/кист/.test(t)) return 'киста';
+  if (/гемангиом/.test(t)) return 'гемангиома';
+  if (/полип/.test(t)) return 'полип';
+  if (/конкремент|камн|камен/.test(t)) return 'конкремент';
+  if (/включени/.test(t)) return 'включение';
+  if (/узел|узл/.test(t)) return 'узел';
+  if (/очаг/.test(t)) return 'очаговое образование';
+  return 'образование';
+}
+const ROM = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+function locFrom(t, tplKey) {
+  if (tplKey === 'thyroid') return /прав/.test(t) ? 'правая доля' : /лев/.test(t) ? 'левая доля' : /переш/.test(t) ? 'перешеек' : null;
+  const sm = t.match(/(?<![а-я])(?:s|с)?\s*сегмент\S*\s+(\S+)|(?<![а-я0-9])s\s?([1-8])(?![0-9])/);
+  if (sm) {
+    const w = sm[1] || sm[2]; let n = /^\d$/.test(w) ? +w : W[w] ? W[w][0] : ROM.indexOf(w.toUpperCase());
+    if (n >= 1 && n <= 8) return 'печень, сегмент S' + ROM[n];
+  }
+  if (/печен/.test(t)) return /прав/.test(t) ? 'правая доля печени' : /лев/.test(t) ? 'левая доля печени' : 'печень';
+  if (/почк/.test(t)) return /прав/.test(t) ? 'правая почка' : /лев/.test(t) ? 'левая почка' : 'почка';
+  if (/желчн|пузыр/.test(t)) return 'желчный пузырь';
+  if (/головк/.test(t)) return 'головка поджелудочной железы';
+  if (/хвост/.test(t)) return 'хвост поджелудочной железы';
+  if (/поджелуд/.test(t)) return 'поджелудочная железа';
+  if (/селезен/.test(t)) return 'селезёнка';
+  return null;
+}
+/** Числа размеров без номера сегмента печени. */
+const lesNums = seg => parseNumbers(seg.replace(/(?:сегмент\S*\s+\S+|(?<![а-я0-9])s\s?[1-8](?![0-9]))/g, ' ')).slice(0, 3);
+/** Описание образования: фраза без размеров, локализации и служебных слов. */
+function descFrom(seg) {
+  const DROP = /^(\d+([.,]\d+)?|мм|см|миллиметр\S*|сантиметр\S*|размер\S*|запятая|точка|целых|целая|прав\S*|лев\S*|дол[еияю]\S*|переш\S*|сегмент\S*|s[1-8]|печен\S*|почк\S*|селезенк\S*|поджелуд\S*|желчн\S*|пузыр\S*|желез\S*|определя\S*|лоциру\S*|визуализиру\S*|выявля\S*)$/;
+  const toks = norm(seg).replace(/(\d)\s*[xх×*]\s*(?=\d)/g, '$1 на ').split(/\s+/).filter(Boolean);
+  const isNum = w => w && (/^\d/.test(w) || W[w] || DEC.has(w) || w === 'полтора' || w === 'полторы');
+  const keep = toks.map((w, i) => /^(на|x|х)$/.test(w) ? !(isNum(toks[i - 1]) || isNum(toks[i + 1])) : !(DROP.test(w) || isNum(w)));
+  for (let i = toks.length - 1; i >= 0; i--) if (/^(в|во|из|с)$/.test(toks[i]) && (i + 1 >= toks.length || !keep[i + 1])) keep[i] = false;
+  return fixTerms(toks.filter((_, i) => keep[i]).join(' ').replace(/^(и|,)\s+/, '').trim());
+}
 
 /** Собирает размеры поля: по порядку или по словам «длина/ширина/толщина/высота»; дополняет ранее начатое значение. */
 function dimsFrom(f, seg, prev) {
@@ -372,7 +454,7 @@ function parseUtterance(text, tplKey, ctx) {
   ctx = ctx || {}; const vals = ctx.vals || {};
   const tpl = TEMPLATES[tplKey];
   const t = norm(text).replace(/[.,;:!?]+(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
-  if (/конец примечани|примечани\S* (законч|конец)/.test(t)) return {ops: [], command: 'endnote', text: t, active: null, pendLoc: null};
+  if (/конец (примечани|описани)|(примечани|описани)\S* (законч|конец)/.test(t)) return {ops: [], command: 'endnote', text: t, active: null, pendLoc: null};
   const found = [];
   for (const f of tpl.fields) for (const a of f.al) {
     const re = new RegExp(B + '(?:' + a + ')', 'g'); let m;
@@ -385,12 +467,26 @@ function parseUtterance(text, tplKey, ctx) {
   // идёт примечание: поле посреди фразы («определяется перинодулярный кровоток») — это текст примечания, а не новое поле
   const actF = ctx.active && tpl.fields.find(x => x.id === ctx.active);
   if (actF && actF.type === 'note' && acc.length && acc[0].s > 0) acc.length = 0;
+  const nodF = tpl.fields.find(f => f.type === 'nodule');
+  const pend = actF && actF.type === 'nodule' ? ctx.pendLoc : null;            // образование названо, ждём размеры
+  const describing = actF && actF.type === 'nodule' && !ctx.pendLoc;          // образование записано, идёт его описание
+  let descPrefix = '';
+  if (describing) {
+    // фраза, начатая с названия поля («эхогенность печени повышена»), идёт в поле;
+    // остальное («с ровными контурами», «кровоток в узле периферический») — описание последнего образования
+    const nodMid = acc.some(m => m.f.type === 'nodule' && m.s > 0 && !NONE.test(t.slice(m.s)) && !lesNums(t.slice(m.e)).length);
+    const k = nodMid ? [] : acc.filter(m => m.f.type !== 'enum' || m.f.lesion || m.s === 0);
+    acc.length = 0; acc.push(...k);
+    descPrefix = (acc.length ? t.slice(0, acc[0].s) : t).trim();
+    if (/^(в|во|из|и|с|на)?$/.test(descPrefix)) descPrefix = '';
+  }
+  if (pend && acc.length && acc[0].f.lobe && /^(в|во|из)?\s*$/.test(t.slice(0, acc[0].s)))
+    acc.unshift({s: 0, e: 0, f: nodF, txt: '', pend});                       // «… в правой доле 10 на 12» после «образование»
   const ni = acc.findIndex(m => m.f.type === 'note'); if (ni >= 0) acc.length = ni + 1;   // примечание забирает всё до конца фразы
 
   const ops = []; let active = null, pendLoc = null;
-  const nodF = tpl.fields.find(f => f.type === 'nodule');
+  if (descPrefix) { ops.push({f: nodF, descAppend: descPrefix}); active = nodF.id; }
   const segOf = i => t.slice(acc[i].e, i + 1 < acc.length ? acc[i + 1].s : t.length).trim();
-  const locIn = x => /прав/.test(x) ? 'правая доля' : /лев/.test(x) ? 'левая доля' : /переш/.test(x) ? 'перешеек' : null;
 
   const doDims = (f, seg) => {
     const r = dimsFrom(f, seg, vals[f.id]);
@@ -410,26 +506,37 @@ function parseUtterance(text, tplKey, ctx) {
     if (seg) { ops.push({f, value: fixTerms(seg), warn: 'записано как свободный текст'}); return; }
     ops.push({f, pending: true}); active = f.id;
   };
-  const doNod = (seg, loc, alias) => {
+  const doNod = (seg, loc, kind, alias) => {
     if (NONE.test((alias || '') + ' ' + seg)) { ops.push({f: nodF, nodNone: true}); return; }
-    const nums = parseNumbers(seg).slice(0, 3);
-    loc = loc || locIn(seg);
-    if (!nums.length) { ops.push({f: nodF, pending: true}); active = nodF.id; pendLoc = loc; return; }
-    ops.push({f: nodF, nod: {loc: loc || '—', dims: nums, desc: nodDescr(seg)}, warn: nums.length < 3 ? 'у узла меньше 3 размеров' : undefined});
+    const nums = lesNums(seg), ls = locFrom(seg, tplKey);
+    loc = ls && /сегмент/.test(ls) ? ls : loc || ls;
+    if (!nums.length) { ops.push({f: nodF, pending: true, kind}); active = nodF.id; pendLoc = {loc, kind}; return; }
+    ops.push({f: nodF, nod: {kind, loc: loc || '', dims: nums, desc: descFrom(seg)}, warn: nums.length < 3 && kind !== 'конкремент' && kind !== 'полип' ? 'меньше 3 размеров' : undefined});
+    active = nodF.id;                                                          // дальше можно продиктовать описание
+  };
+  // «узловые образования … правая доля … образование размерами 10 на 15 на 20» — одно образование, а не три поля
+  const absorb = (i, seg, loc, txt) => {
+    while (!lesNums(seg).length && !NONE.test(txt + ' ' + seg) && i + 1 < acc.length && (acc[i + 1].f.lobe || acc[i + 1].f.type === 'nodule')) {
+      i++; loc = acc[i].f.lobe || locFrom(acc[i].txt, tplKey) || loc; txt += ' ' + acc[i].txt; seg = segOf(i);
+    }
+    return {i, seg, loc, txt};
   };
 
   for (let i = 0; i < acc.length; i++) {
     const m = acc[i], f = m.f; let seg = segOf(i);
     if (f.type === 'dims') doDims(f, seg);
+    else if (f.type === 'enum' && f.lesion && (lesNums(seg).length || (i + 1 < acc.length && acc[i + 1].f.lobe))) {
+      // «конкремент в желчном пузыре 8 мм» — и поле «выявлены», и запись в разделе образований
+      const r = absorb(i, seg, f.lesionLoc, m.txt); i = r.i;
+      ops.push({f, value: f.opts.find(o => o[0] !== f.normal)[0]});
+      doNod(r.seg, r.loc, f.lesion, r.txt);
+    }
     else if (f.type === 'enum') doEnum(f, seg);
     else if (f.type === 'nodule') {
-      let loc = locIn(m.txt);
-      // «узловые образования … правая доля … образование размерами 10 на 15 на 20» — это один узел, а не три поля
-      while (!parseNumbers(seg).length && !NONE.test(m.txt + ' ' + seg) && i + 1 < acc.length && (acc[i + 1].f.lobe || acc[i + 1].f.type === 'nodule')) {
-        i++; loc = acc[i].f.lobe || locIn(acc[i].txt) || loc; seg = segOf(i);
-      }
-      doNod(seg, loc, m.txt);
-    } else if (f.type === 'note') { ops.push(seg ? {f, note: fixTerms(seg).replace(/^./, c => c.toUpperCase())} : {f, pending: true}); active = f.id; }
+      const r = absorb(i, seg, m.pend ? m.pend.loc : locFrom(m.txt, tplKey), m.txt); i = r.i;
+      const kind = m.pend ? m.pend.kind : tplKey === 'thyroid' && !/кист/.test(r.txt) ? 'узел' : lesKind(r.txt);
+      doNod(r.seg, r.loc, kind, r.txt);
+    } else if (f.type === 'note') { ops.push(seg ? {f, note: cap(fixTerms(seg))} : {f, pending: true}); active = f.id; }
   }
 
   let command = null;
@@ -439,11 +546,12 @@ function parseUtterance(text, tplKey, ctx) {
     else if (new RegExp(B + '(отмен\\S*|назад|удали\\S*)').test(t)) command = 'undo';
     else if (new RegExp(B + 'повтор\\S*').test(t)) command = 'repeat';
     else if (new RegExp(B + '(стоп|хватит|законч\\S*|выключ\\S*)').test(t)) command = 'stop';
+    if (/конец описани|описани\S* (законч|конец)/.test(t)) command = 'enddesc';
     if (!command && ctx.active) {              // продолжение ранее названного поля
       const f = tpl.fields.find(x => x.id === ctx.active);
       if (f && f.type === 'dims') { if (dimsFrom(f, t, vals[f.id]).cnt) doDims(f, t); }
       else if (f && f.type === 'enum') doEnum(f, t, true);
-      else if (f && f.type === 'nodule') { if (parseNumbers(t).length) doNod(t, ctx.pendLoc); }
+      else if (f && f.type === 'nodule') { if (pend) doNod(t, pend.loc, pend.kind); else if (!describing) { /* уже обработано */ } }
       else if (f && f.type === 'note' && t) { ops.push({f, noteAppend: fixTerms(t)}); active = f.id; }   // длинное примечание приходит кусками
     }
   }
@@ -452,6 +560,9 @@ function parseUtterance(text, tplKey, ctx) {
 
 /* ===================== СОСТОЯНИЕ И РАСЧЁТЫ ===================== */
 const newState = () => ({vals: {}, nods: [], nodNone: false, notes: []});
+const lesVol = d => d && d.length === 3 ? d[0] * d[1] * d[2] * 0.523 / 1000 : null;   // эллипсоид, мл
+const lesText = n => cap([n.kind || 'образование', n.loc].filter(Boolean).join(', ')) + ' — ' + (n.dims.length ? n.dims.map(fmt).join(' × ') + ' мм' : 'размеры не указаны') +
+  (lesVol(n.dims) != null ? ' (V ≈ ' + fmt(lesVol(n.dims)) + ' мл)' : '') + (n.desc ? '; ' + n.desc : '');
 
 function applyOps(st, ops) {
   for (const op of ops) {
@@ -459,6 +570,7 @@ function applyOps(st, ops) {
     if (op.nodNone) { st.nods = []; st.nodNone = true; }
     else if (op.nod) { st.nods.push(op.nod); st.nodNone = false; }
     else if (op.note) st.notes.push(op.note);
+    else if (op.descAppend) { const n = st.nods[st.nods.length - 1]; if (n) n.desc = (n.desc ? n.desc + ', ' : '') + fixTerms(op.descAppend); }
     else if (op.noteAppend) { if (st.notes.length) st.notes[st.notes.length - 1] += ' ' + op.noteAppend; else st.notes.push(op.noteAppend.replace(/^./, c => c.toUpperCase())); }
     else st.vals[op.f.id] = op.value;
   }
@@ -524,13 +636,20 @@ function buildProtocol(tplKey, st, opts) {
       L.push('Общий объём щитовидной железы: ' + fmt(c.total) + ' мл (ориентир для ' + (opts.sex === 'm' ? 'мужчин' : 'женщин') + ' до ' + c.max + ' мл).');
       if (c.total > c.max) devs.unshift('Увеличение объёма щитовидной железы (' + fmt(c.total) + ' мл)');
     }
-    if (st.nods.length) {
-      L.push('Узловые образования:');
-      st.nods.forEach((n, i) => L.push('  ' + (i + 1) + ') ' + n.loc + ' — ' + n.dims.map(fmt).join(' × ') + ' мм' + (n.desc ? ', ' + n.desc : '')));
-      devs.push('Узловые образования щитовидной железы (' + st.nods.length + ') — оценить по TI-RADS');
-    } else if (st.nodNone) L.push('Узловые образования: не выявлены.');
   }
-  if (st.notes.length) { L.push(''); L.push('Примечание: ' + st.notes.map(x => x.replace(/[.\s]+$/, '')).join('. ') + '.'); }
+  const lesHead = tplKey === 'thyroid' ? 'Узловые образования' : 'Очаговые образования';
+  if (st.nods.length) {
+    L.push(lesHead + ':');
+    st.nods.forEach((n, i) => L.push('  ' + (i + 1) + ') ' + lesText(n) + '.'));
+    devs.push(tplKey === 'thyroid' ? 'Узловые образования щитовидной железы (' + st.nods.length + ') — оценить по TI-RADS'
+      : 'Очаговые образования: ' + st.nods.map(n => [n.kind, n.loc].filter(Boolean).join(' — ')).join('; '));
+  } else if (st.nodNone) L.push(lesHead + ': не выявлены.');
+  const notes = st.notes.filter(x => x && x.trim()).map(cap);
+  if (notes.length) {
+    L.push('');
+    if (notes.length === 1) L.push('Примечание: ' + notes[0].replace(/[.\s]+$/, '') + '.');
+    else { L.push('Примечания:'); notes.forEach(x => L.push('— ' + x.replace(/[.\s]+$/, '') + '.')); }
+  }
   L.push('', 'Заключение (черновик, проверяет врач):');
   if (devs.length) devs.forEach(d => L.push('— ' + d));
   else L.push('Измеренные параметры в пределах ориентировочных норм.');
@@ -558,6 +677,7 @@ if (typeof document !== 'undefined') {
     const tb = $('fields'); tb.innerHTML = '';
     let org = null;
     for (const f of tpl.fields) {
+      if (f.type === 'nodule' || f.type === 'note') continue;   // — в разделе «Образования и примечания»
       if (f.org && f.org !== org) { org = f.org; const r = tb.insertRow(); r.className = 'org'; const c = r.insertCell(); c.colSpan = 4; c.textContent = org; }
       const r = tb.insertRow(); if (flashIds.includes(f.id)) r.className = 'flash';
       r.insertCell().textContent = f.label;
@@ -603,7 +723,55 @@ if (typeof document !== 'undefined') {
         (c.vl != null ? fmt(c.vl) + ' мл' : '—') + '</b>, общий <b>' + (c.total != null ? fmt(c.total) + ' мл' : '—') + '</b>' +
         ' <span class="note">(ориентир до ' + c.max + ' мл; формула 0,479 × Д × Ш × Т)</span>';
     } else { calc.className = ''; calc.innerHTML = ''; }
+    renderLes(flashIds);
     $('proto').value = buildProtocol(tplKey, s, {pname: $('pname').value.trim(), page: $('page').value, date: today, sex: $('sex').value});
+  }
+
+  const esc = x => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const KINDS = {thyroid: ['узел', 'киста', 'кистозное образование', 'образование', 'кальцинат'],
+    abd: ['киста', 'гемангиома', 'очаговое образование', 'конкремент', 'полип', 'включение', 'образование']};
+  const LOCS = {thyroid: ['правая доля', 'левая доля', 'перешеек'],
+    abd: ['правая доля печени', 'левая доля печени', 'печень, сегмент S', 'желчный пузырь', 'головка поджелудочной железы', 'тело поджелудочной железы',
+      'хвост поджелудочной железы', 'селезёнка', 'правая почка', 'левая почка']};
+  function renderLes(flashIds) {
+    const s = st();
+    $('lesTitle').textContent = (tplKey === 'thyroid' ? 'Узловые образования' : 'Очаговые образования') + ' и примечания';
+    const L = $('lesList'); L.innerHTML = '';
+    const dl = '<datalist id="dlK">' + KINDS[tplKey].map(k => '<option value="' + k + '">').join('') + '</datalist>' +
+      '<datalist id="dlL">' + LOCS[tplKey].map(k => '<option value="' + k + '">').join('') + '</datalist>';
+    L.insertAdjacentHTML('beforeend', dl);
+    if (!s.nods.length) L.insertAdjacentHTML('beforeend', s.nodNone ? '<div class="empty ok">✓ Образования не выявлены</div>'
+      : '<div class="empty">Пока нет. Скажите, например: <code>' + (tplKey === 'thyroid' ? 'узел в правой доле 10 на 8 на 9 гипоэхогенный' : 'киста в правой доле печени 12 на 10 на 9') + '</code></div>');
+    const describing = active === 'nod' && !pendLoc;
+    s.nods.forEach((n, i) => {
+      const d = document.createElement('div');
+      d.className = 'les' + (describing && i === s.nods.length - 1 ? ' cur' : '') + (flashIds.includes('nod') && i === s.nods.length - 1 ? ' flash' : '');
+      const v = lesVol(n.dims);
+      d.innerHTML = '<div class="num">' + (i + 1) + '</div>' +
+        '<label>Вид<input type="text" data-k="kind" list="dlK" value="' + esc(n.kind) + '"></label>' +
+        '<label>Локализация<input type="text" data-k="loc" list="dlL" value="' + esc(n.loc) + '"></label>' +
+        '<label>Размеры, мм<input type="text" data-k="dims" class="dims" value="' + esc(n.dims.map(fmt).join(' × ')) + '" placeholder="Д × Ш × Т">' +
+          '<span class="vol">' + (v != null ? 'V ≈ ' + fmt(v) + ' мл' : '&nbsp;') + '</span></label>' +
+        '<label>Описание<textarea data-k="desc" rows="2" placeholder="эхогенность, контуры, структура, кровоток…">' + esc(n.desc) + '</textarea></label>' +
+        '<button class="del" title="Удалить">✕</button>';
+      d.querySelectorAll('[data-k]').forEach(el => el.onchange = () => {
+        snapshot(); const k = el.dataset.k;
+        n[k] = k === 'dims' ? parseNumbers(el.value).slice(0, 3) : el.value.trim();
+        render();
+      });
+      d.querySelector('.del').onclick = () => { snapshot(); s.nods.splice(i, 1); if (active === 'nod') { active = null; showActive(); } render(); };
+      L.appendChild(d);
+    });
+    const N = $('noteList'); N.innerHTML = '';
+    if (!s.notes.length) N.innerHTML = '<div class="empty">Скажите «примечание …» и диктуйте свободно, или нажмите «＋ Примечание».</div>';
+    s.notes.forEach((x, i) => {
+      const d = document.createElement('div'); d.className = 'nt';
+      d.innerHTML = '<textarea rows="2">' + esc(x) + '</textarea><button class="del" title="Удалить">✕</button>';
+      const ta = d.querySelector('textarea');
+      ta.onchange = () => { snapshot(); s.notes[i] = ta.value.trim(); if (!s.notes[i]) s.notes.splice(i, 1); render(); };
+      d.querySelector('.del').onclick = () => { snapshot(); s.notes.splice(i, 1); render(); };
+      N.appendChild(d);
+    });
   }
 
   function logItem(cls, heard, res) {
@@ -624,17 +792,20 @@ if (typeof document !== 'undefined') {
     } catch (e) { speaking = false; }
   }
 
-  const mkCtx = () => ({active: Date.now() - activeAt < (active === 'note' ? 15000 : 30000) ? active : null, pendLoc, vals: st().vals});
+  const mkCtx = () => ({active: Date.now() - activeAt < (active === 'note' || (active === 'nod' && !pendLoc) ? 15000 : 30000) ? active : null, pendLoc, vals: st().vals});
   function showActive() {
     const f = active && TEMPLATES[tplKey].fields.find(x => x.id === active);
+    const n = st().nods.length;
     $('active').textContent = !f ? '' : f.type === 'note' ? '📝 Примечание: продолжайте диктовать. Закончить — «конец примечания» или назовите следующее поле'
+      : f.type === 'nodule' && !pendLoc ? '📝 Описание образования №' + n + ': продолжайте («с ровными контурами…»). Закончить — «конец описания» или назовите поле'
+      : f.type === 'nodule' ? '⏳ ' + cap(pendLoc.kind || 'образование') + (pendLoc.loc ? ', ' + pendLoc.loc : '') + ': назовите размеры'
       : '⏳ Поле «' + f.label + '» ждёт значение — просто назовите его';
   }
   function handle(text) {
     const r = parseUtterance(text, tplKey, mkCtx());
     if (r.command === 'undo') { undo(); logItem('cmd', text, '↶ отменено'); return; }
     if (r.command === 'repeat') { const t = lastSpoken; lastSpoken = ''; speak(t || 'нечего повторять'); logItem('cmd', text, '🔁 повтор'); return; }
-    if (r.command === 'endnote') { active = null; showActive(); logItem('cmd', text, '📝 примечание закончено'); return; }
+    if (r.command === 'endnote') { const w = active === 'nod' ? 'описание образования закончено' : 'примечание закончено'; active = null; pendLoc = null; showActive(); render(); logItem('cmd', text, '📝 ' + w); return; }
     if (r.command === 'stop') { stopMic(); logItem('cmd', text, '⏹ диктовка остановлена'); return; }
     if (!r.ops.length) { logItem('err', text, '❌ поле не распознано — назовите поле ещё раз'); return; }
     snapshot();
@@ -642,15 +813,16 @@ if (typeof document !== 'undefined') {
     active = r.active; pendLoc = r.pendLoc; activeAt = Date.now(); showActive();
     const lines = [], say = [];
     for (const op of r.ops) {
-      if (op.pending) { lines.push('⏳ ' + op.f.label + ': жду значение'); say.push(op.f.label); continue; }
+      if (op.pending) { const nm = op.f.type === 'nodule' ? cap(op.kind || 'образование') : op.f.label; lines.push('⏳ ' + nm + ': жду ' + (op.f.type === 'nodule' ? 'размеры' : 'значение')); say.push(nm); continue; }
+      if (op.descAppend) { lines.push('✅ Описание образования №' + st().nods.length + ': ' + esc(op.descAppend)); continue; }
       let t;
-      if (op.nodNone) t = 'узлы не выявлены';
-      else if (op.nod) t = 'узел, ' + (op.nod.loc !== '—' ? op.nod.loc + ', ' : '') + op.nod.dims.map(fmt).join(' на ');
+      if (op.nodNone) t = 'образования не выявлены';
+      else if (op.nod) t = [op.nod.kind, op.nod.loc, op.nod.dims.map(fmt).join(' на ')].filter(Boolean).join(', ');
       else if (op.note || op.noteAppend) t = '';
       else t = op.f.label + ', ' + (Array.isArray(op.value) ? op.value.filter(x => x != null).map(fmt).join(' на ') : op.value);
       if (t) say.push(t);
-      lines.push('✅ ' + (op.noteAppend ? 'Примечание (продолжение): ' + op.noteAppend : op.nod ? 'Узел: ' + op.nod.loc + ' ' + op.nod.dims.map(fmt).join(' × ') + ' мм' + (op.nod.desc ? ', ' + op.nod.desc : '')
-        : op.nodNone ? 'Узловые образования: не выявлены' : op.note ? 'Примечание: ' + op.note : op.f.label + ': ' + valueText(op.f, op.value))
+      lines.push('✅ ' + (op.noteAppend ? 'Примечание (продолжение): ' + op.noteAppend : op.nod ? 'Образование №' + st().nods.length + ': ' + esc(lesText(op.nod))
+        : op.nodNone ? 'Образования: не выявлены' : op.note ? 'Примечание: ' + op.note : op.f.label + ': ' + valueText(op.f, op.value))
         + (op.warn ? ' <span style="color:var(--warn)">(' + op.warn + ')</span>' : ''));
     }
     logItem(r.ops.some(o => o.pending) ? 'cmd' : 'ok', text, lines.join('<br>'));
@@ -727,6 +899,11 @@ if (typeof document !== 'undefined') {
   // --- прочие кнопки ---
   $('testBtn').onclick = () => { const t = $('testText').value.trim(); if (t) { handle(t); $('testText').value = ''; } };
   $('testText').addEventListener('keydown', e => { if (e.key === 'Enter') $('testBtn').click(); });
+  $('addLes').onclick = () => { snapshot(); st().nods.push({kind: KINDS[tplKey][0], loc: '', dims: [], desc: ''}); st().nodNone = false; active = null; showActive(); render(['nod']);
+    const last = $('lesList').querySelectorAll('.les'); const el = last[last.length - 1]; if (el) el.querySelector('[data-k=loc]').focus(); };
+  $('noLes').onclick = () => { snapshot(); st().nods = []; st().nodNone = true; active = null; showActive(); render(); };
+  $('addNote').onclick = () => { snapshot(); st().notes.push(''); render();
+    const t = $('noteList').querySelectorAll('textarea'); const el = t[t.length - 1]; if (el) el.focus(); };
   $('undo').onclick = () => { undo(); logItem('cmd', 'кнопка', '↶ отменено'); };
   $('reset').onclick = () => { snapshot(); states[tplKey] = newState(); render(); logItem('cmd', 'кнопка', 'шаблон очищен (можно отменить)'); };
   $('tpl').onchange = () => { tplKey = $('tpl').value; active = null; showActive(); renderHelp(); render(); };
